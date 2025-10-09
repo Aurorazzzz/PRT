@@ -1,5 +1,6 @@
 // Salut Aurore, je ferais la vaiselle pendant 6 mois si tu m'aides à finir ce code
 // Mais bien sur Théo, c'est avec plaisir !!
+// Salut >AUrore :)
 #include "SOC_Aurore.h"
 
 #define max(a,b) ((a) > (b) ? (a) : (b))
