@@ -1,0 +1,7 @@
+# Ignorer les exécutables
+*.exe
+*.o
+*.out
+
+# Ignorer les dossiers de build
+/output/
