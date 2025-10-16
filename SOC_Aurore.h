@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 
 /* Prototypes generated from SOC_Aurore.c */
 
@@ -30,5 +31,9 @@ void sigma_g_sigmoide(int x_size, float *pointeur_entree, float *pointeur_sortie
 void sigma_c_tanh(int x_size, float *pointeur_entree, float *pointeur_sortie_tanh);
 
 void MatriceFoisVecteur(int nbLignesMatrice, int tailleVecteur, const float *pointeur_matrice, float *pointeur_vecteur, float *pointeur_sortie_prodMat);
+
+void Charge_donnees (float **courant, float **tension, float **temperature, float **SOH, float **SOC);
+
+void Free_donnees (float *courant, float *tension, float *temperature, float *SOH, float *SOC);
 
 #endif /* SOC_AURORE_H */

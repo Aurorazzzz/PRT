@@ -5,25 +5,34 @@
 
 void setup() {
 
+
+  // const float *courant;
+  // const float *tension;
+  // const float *temperature;
+  // const float *SOH;
+  // const float *SOC;
+
+  // Charge_donnees(&courant, &tension, &temperature, &SOH, &SOC);
+
   // dimension du LSTM
   const int tailleEntree = 3;
   const int tailleReseau = 20;
   const int tailleSortie = 1;
 
   // entrées & états
-  float courant = 3;
-  float tension = 3.05;
-  float temperature = 35;
-  float SOH = 1;
-  float SOC = 0.1136;
+ float courant = 3;
+ float tension = 3.05;
+ float temperature = 35;
+ float SOH = 1;
+ float SOC = 0.1136;
 
 // Aurore : taille des tableaux enlever. Inutile si la taille ne change pas et cause des erreurs
 
 // Aurore : Pourquoi xt est initialisé ?
 
 float xt[] = {9.4559 , 4.2866 , -13.2461 };
-float ht[] = {6.4638 , -13.892 , -13.4068 , 11.2887 , 0.016961 , 3.7968 , -9.0133 , -1.9679 , 3.0694 , 1.6746 , 17.8808 , -6.2408 }; 
-float ct[] = {-1.4996 , 8.3222 , 9.4809 , -19.7374 , -3.9188 , -6.7671 , -0.16021 , 5.1517 , 4.4483 , 11.409 , 4.4768 , 3.1544 }; 
+float ht[] = {0.1157, 0.2669, -0.5719, 0.3345, -0.1887, -0.5037, -0.3970, -0.3553, -0.3327, 0.0491, 0.1934, -0.4422, -0.2691, 0.4599, -0.0373, 0.1583, -0.0514, 0.0310, -0.4235, -0.3411};
+float ct[] = {0.2272, 0.6358, -1.7725, 0.9569, -0.4277, -1.6045, -1.2961, -0.9198, -0.9595, 0.1067, 0.4158, -1.3382, -0.7046, 1.1510, -0.0732, 0.3717, -0.1002, 0.0632, -0.8727, -0.9008};
 const float Wi[] = {
 -0.0013864826, -0.0062211026, 0.028899601,
 -0.034216348, 0.016249107, 0.0082352981,
@@ -371,7 +380,6 @@ const float ECART_TYPE[] = {
   // Aurore : Mesure du temps de simulation, a régler plus tard
   // tempsInitial = micros();
   for (z = 0; z <= NbIteration - 1; z++) {
-    printf("%f\n", *(pointeur_SOC));
     estimationSOC(courant, tension, temperature, SOH, moins_eta_sur_Q, pointeur_Pk, pointeur_SOC,
                     dt, Qk, Rk, tailleEntree, tailleReseau, tailleSortie, pointeur_sortie_LSTM,
                    pointeur_xt, pointeur_ct, pointeur_ht,
@@ -395,6 +403,8 @@ const float ECART_TYPE[] = {
   //printf("Bilan (ms) : ");
   //printf(bilanTempsLSTM / 1000);
   printf("");
+
+  //Free_donnees(courant, tension, temperature, SOH, SOC);
 }
 
 // Aurore : fonction loop inutile
@@ -538,6 +548,60 @@ void MatriceFoisVecteur(int nbLignesMatrice, int tailleVecteur, const float *poi
     }
     *(pointeur_sortie_prodMat + i) = resultat_tmp;
   }
+
+}
+
+void Charge_donnees ( float **courant,  float **tension,  float **temperature,  float **SOH, float **SOC) {
+    char *fichiers[] = {"courant.bin", "temperature.bin", "tension.bin",  "SOH.bin", "SOC.bin"};
+    float **donnees[] = { courant, tension, temperature, SOH, SOC };
+    int nFichiers = 5;
+    
+    size_t N = 4841577; // nombre d'éléments dans ton fichier
+
+    for(int k = 0; k < nFichiers; k++) {
+        *donnees[k] = malloc(N * sizeof(float));
+        if(*donnees[k] == NULL) {
+            printf("Erreur allocation mémoire\n");
+            // ici, tu pourrais libérer ce qui a déjà été alloué
+            return;
+        }
+    }
+
+    for(int k = 0; k < nFichiers; k++) {
+    // Si besoin, tu peux construire un chemin complet
+    char chemin[256];
+    snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
+    printf(chemin);
+    
+    FILE *fp;
+    // Ouverture du fichier binaire
+    fp = fopen(chemin, "rb"); // rb = read binary
+    if(fp == NULL) {
+        printf("Erreur ouverture fichier !\n");
+        // Donner contient les adresses des pointeurs, je veux modifier l'adresse pointer par le pointeur, donc dereferencement
+        free(*donnees[k]);
+        return 1;
+    }
+
+    // Lecture des données dans le vecteur
+    size_t nbLu = fread(*donnees[k], sizeof(float), N, fp);
+    if(nbLu != N) {
+        printf("Erreur lecture fichier : lu %zu éléments au lieu de %zu\n", nbLu, N);
+    }
+
+    fclose(fp);
+
+    printf("Premier : %f\n", (*donnees[k])[0]);
+    printf("Dernier : %f\n", (*donnees[k])[N-1]);
+    }
+}
+
+void Free_donnees ( float *courant,  float *tension,  float *temperature,  float *SOH,  float *SOC) {
+    free(courant);
+    free(tension);
+    free(temperature);
+    free(SOH);
+    free(SOC);
 }
 
 // Aurore : Rajout du main, sinon ça fonctionne pas
