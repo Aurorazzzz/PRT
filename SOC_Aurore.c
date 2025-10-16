@@ -18,9 +18,11 @@ void setup() {
   float tension = 3.05;
   float temperature = 35;
   float SOH = 1;
-  float SOC = 0.5;
+  float SOC = 0.1136;
 
 // Aurore : taille des tableaux enlever. Inutile si la taille ne change pas et cause des erreurs
+
+// Aurore : Pourquoi xt est initialisé ?
 
 float xt[] = {9.4559 , 4.2866 , -13.2461 };
 float ht[] = {6.4638 , -13.892 , -13.4068 , 11.2887 , 0.016961 , 3.7968 , -9.0133 , -1.9679 , 3.0694 , 1.6746 , 17.8808 , -6.2408 }; 
@@ -113,7 +115,8 @@ const float ECART_TYPE[] = {2.8921 , 4.4502 , 5.0943 };
   // Aurore : Mesure du temps de simulation, a régler plus tard
   // tempsInitial = micros();
   for (z = 0; z <= NbIteration - 1; z++) {
-  estimationSOC(courant, tension, temperature, SOH, moins_eta_sur_Q, pointeur_Pk, pointeur_SOC,
+    printf("%f\n", *(pointeur_SOC));
+    estimationSOC(courant, tension, temperature, SOH, moins_eta_sur_Q, pointeur_Pk, pointeur_SOC,
                     dt, Qk, Rk, tailleEntree, tailleReseau, tailleSortie, pointeur_sortie_LSTM,
                    pointeur_xt, pointeur_ct, pointeur_ht,
                    pointeur_it, pointeur_ft, pointeur_gt, pointeur_ot,
@@ -124,7 +127,7 @@ const float ECART_TYPE[] = {2.8921 , 4.4502 , 5.0943 };
                    pointeur_vect_intermediaire_1, pointeur_vect_intermediaire_2);
 
   
-  printf("%f\n", *(pointeur_SOC));
+    printf("%f\n", *(pointeur_SOC));
   }
   // Aurore : A regler plus tard
   //tempsFinal = micros();
