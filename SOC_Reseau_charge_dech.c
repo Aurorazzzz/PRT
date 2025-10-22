@@ -414,14 +414,14 @@ const float ECART_TYPE[] = {
   unsigned long tempsFinal;
   float bilanTempsLSTM;
   float bilanTempsFdK;
-  const int NbIteration = 1000000;
+  const int NbIteration = 1000;
   int z;
 
   //Aurore : Initialisation du vecteur contenant le SOC :
   float *vecteur_SOC = malloc(NbIteration * sizeof(float));
   if (!vecteur_SOC) {
       perror("Erreur allocation mémoire");
-      return 1;
+      return;
   }
 
   // initialisation de la communication pour les résultats
@@ -605,9 +605,9 @@ void MatriceFoisVecteur(int nbLignesMatrice, int tailleVecteur, const float *poi
 
 }
 
-void Charge_donnees ( float **courant,  float **tension,  float **temperature,  float **SOH, float **SOC) {
+void Charge_donnees (const float **courant,const float **tension, const float **temperature, const float **SOH, const float **SOC) {
     char *fichiers[] = {"courant.bin", "tension.bin", "temperature.bin",  "SOH.bin", "SOC.bin"};
-    float **donnees[] = { courant, tension, temperature, SOH, SOC };
+    const float **donnees[] = { courant, tension, temperature, SOH, SOC };
     int nFichiers = 5;
     
     size_t N = 4841577; // nombre d'éléments dans ton fichier
@@ -634,7 +634,7 @@ void Charge_donnees ( float **courant,  float **tension,  float **temperature,  
         printf("Erreur ouverture fichier !\n");
         // Donner contient les adresses des pointeurs, je veux modifier l'adresse pointer par le pointeur, donc dereferencement
         free(*donnees[k]);
-        return 1;
+        return;
     }
 
     // Lecture des données dans le vecteur
@@ -650,7 +650,7 @@ void Charge_donnees ( float **courant,  float **tension,  float **temperature,  
     }
 }
 
-void Free_donnees ( float *courant,  float *tension,  float *temperature,  float *SOH,  float *SOC) {
+void Free_donnees (const float *courant, const float *tension, const float *temperature, const float *SOH, const float *SOC) {
     free(courant);
     free(tension);
     free(temperature);
