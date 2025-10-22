@@ -552,7 +552,7 @@ void MatriceFoisVecteur(int nbLignesMatrice, int tailleVecteur, const float *poi
 }
 
 void Charge_donnees ( float **courant,  float **tension,  float **temperature,  float **SOH, float **SOC) {
-    char *fichiers[] = {"courant.bin", "temperature.bin", "tension.bin",  "SOH.bin", "SOC.bin"};
+    char *fichiers[] = {"courant.bin","tension.bin", "temperature.bin",   "SOH.bin", "SOC.bin"};
     float **donnees[] = { courant, tension, temperature, SOH, SOC };
     int nFichiers = 5;
     

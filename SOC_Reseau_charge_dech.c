@@ -1,4 +1,4 @@
-#include "SOC_Aurore.h"
+#include "SOC_Reseau_charge_dech.h"
 
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -24,7 +24,7 @@ void setup() {
 //  float tension = 3.05;
 //  float temperature = 35;
 //  float SOH = 1;
-  float SOC = 0;
+float SOC = 0;
 
 // Aurore : taille des tableaux enlever. Inutile si la taille ne change pas et cause des erreurs
 
@@ -407,13 +407,22 @@ const float ECART_TYPE[] = {
   const float Rk = 1;
   // Fk et Hk ne sont pas définies car elles valent 1 et sont multiplicatives
 
+
+
   // mesure de temps
   unsigned long tempsInitial;
   unsigned long tempsFinal;
   float bilanTempsLSTM;
   float bilanTempsFdK;
-  const int NbIteration = 1000;
+  const int NbIteration = 1000000;
   int z;
+
+  //Aurore : Initialisation du vecteur contenant le SOC :
+  float *vecteur_SOC = malloc(NbIteration * sizeof(float));
+  if (!vecteur_SOC) {
+      perror("Erreur allocation mémoire");
+      return 1;
+  }
 
   // initialisation de la communication pour les résultats
   // Serial.begin(9600);
@@ -434,7 +443,7 @@ const float ECART_TYPE[] = {
                    pointeur_MOY, pointeur_ECART_TYPE, pointeur_WFC, pointeur_bFC,
                    pointeur_vect_intermediaire_1, pointeur_vect_intermediaire_2);
 
-  
+    vecteur_SOC[z] = *(pointeur_SOC);
     printf("%f\n", *(pointeur_SOC));
   }
   // Aurore : A regler plus tard
@@ -443,12 +452,13 @@ const float ECART_TYPE[] = {
 
   // affichage des résultats
   printf("Sortie : ");
-  printf("%f\n", *(pointeur_SOC) *1000);
+  printf("%f\n", *(pointeur_SOC));
   //printf("Bilan (ms) : ");
   //printf(bilanTempsLSTM / 1000);
   printf("");
-
+  printf("SOC[0] = %f, SOC[%zu] = %f\n", vecteur_SOC[0], NbIteration-1, vecteur_SOC[NbIteration-1]);
   Free_donnees(courant, tension, temperature, SOH, SOC_simu);
+  Ecriture_SOC(vecteur_SOC, NbIteration);
 }
 
 // Aurore : fonction loop inutile
@@ -646,6 +656,23 @@ void Free_donnees ( float *courant,  float *tension,  float *temperature,  float
     free(temperature);
     free(SOH);
     free(SOC);
+}
+
+int Ecriture_SOC(float *SOC, const int NbIteration){
+  FILE *f = fopen("data.bin", "wb");
+  if (!f) {
+        perror("Erreur ouverture fichier");
+        return 1;
+    }
+
+    fwrite(SOC, sizeof(float), NbIteration, f);
+
+    printf("SOC[0] = %f, SOC[%zu] = %f\n", SOC[0], NbIteration-1, SOC[NbIteration-1]);
+
+    fclose(f);
+
+    free(SOC);
+    return 0;
 }
 
 // Aurore : Rajout du main, sinon ça fonctionne pas
