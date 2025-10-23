@@ -1,5 +1,5 @@
-#ifndef SOC_AURORE_H
-#define SOC_AURORE_H
+#ifndef SOC_CHARGE_DECH_H
+#define SOC_CHARGE_DECH_H
 
 #include <stdio.h>
 #include <math.h>
