@@ -1,3 +1,9 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include "SOH_Theo.h"
+#include "Read_Write.h"
+#include <stddef.h>
+
 // ============================================================================
 // Estimation du SOH (traduction C du script MATLAB)
 // Entrées :
@@ -71,4 +77,87 @@ float estimation_SOH(float SOC,
     }
 
     return SOH_courant;
+}
+
+void setup(void)
+{
+    // === Entrées (buffers fournis par Charge_donnees) ===
+    const float *courant    = NULL;
+    const float *tension    = NULL;
+    const float *temperature= NULL;
+    const float *SOH        = NULL;
+    const float *SOC_simu   = NULL;
+
+    // Charge les données
+    size_t nb_samples = 1000000;
+    Charge_donnees(&courant, &tension, &temperature, &SOH, &SOC_simu);
+
+    // === Paramètres ===
+    // Coeffs du filtre IIR d'ordre 1 (a1, a2) et (b1, b2)
+    const float a_filtre_SOH[2] = { 1.0f, -0.969067417193793f };
+    const float b_filtre_SOH[2] = { 0.0154662914031034f, 0.0154662914031034f };
+
+    // Pas d’échantillonnage
+    // à remplacer par la vraie valeur (p.ex. fournie par les données)
+    const float dt = 1.0f;
+
+    // Intégrale de courant à neuf (A·s) = Q_neuf (A·h) * 3600 / eta
+    // TODO: mets ici tes vraies valeurs (ex: 50 Ah, eta=0.99 => 50*3600/0.99)
+    const float capacite_Ah_neuf = 50.0f;     // TODO
+    const float eta_coulombique  = 0.99f;     // TODO
+    const float integrale_courant_neuf =
+        (capacite_Ah_neuf * 3600.0f) / eta_coulombique;
+
+    // === États internes (initialisation) ===
+    float integrale_courant      = 0.0f;
+    float SOC_eval_SOH_precedent = (nb_samples > 0) ? SOC_simu[0] : 0.0f;
+    float SOH_filtre_km1         = (SOH ? SOH[0] : 1.0f);
+    float SOH_depouille_km1      = SOH_filtre_km1;
+    float SOH_courant            = SOH_filtre_km1;
+
+    // === Calcul du SOH pour chaque échantillon ===
+    for (size_t i = 0; i < nb_samples; ++i) {
+        float SOC_i     = SOC_simu[i];   // SOC à l’instant i
+        float I_i       = courant[i];    // courant à l’instant i (A)
+
+        // Détection simple d'une bascule charge↔décharge par changement de signe du courant
+        int changement_etat = 0;
+        if (i > 0) {
+            float I_prev = courant[i - 1];
+            if ( (I_prev >= 0.0f && I_i < 0.0f) || (I_prev <= 0.0f && I_i > 0.0f) ) {
+                changement_etat = 1;
+            }
+        }
+
+        // Estimation / mise à jour du SOH
+        float SOH_est = estimation_SOH(
+                            SOC_i,
+                            I_i,
+                            dt,
+                            changement_etat,
+                            integrale_courant_neuf,
+                            a_filtre_SOH,
+                            b_filtre_SOH,
+                            &integrale_courant,
+                            &SOC_eval_SOH_precedent,
+                            &SOH_filtre_km1,
+                            &SOH_depouille_km1,
+                            SOH_courant);
+
+        // La valeur courante devient la sortie retournée
+        SOH_courant = SOH_est;
+
+        // Affichage (adapte selon ton besoin : fichier, log, etc.)
+        printf("i=%zu  SOC=%.6f  SOH_estime=%.6f\n", i, SOC_i, SOH_est);
+    }
+
+    // Libération des buffers
+    Free_donnees(courant, tension, temperature, SOH, SOC_simu);
+}
+
+
+int main() {
+    setup();
+    printf("Fin du programme\n");
+    return 0;
 }

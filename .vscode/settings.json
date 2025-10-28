@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "stdio.h": "c",
-        "soc_aurore.h": "c"
+        "soc_aurore.h": "c",
+        "read_write.h": "c"
     }
 }

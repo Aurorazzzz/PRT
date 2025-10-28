@@ -115,6 +115,9 @@ void setup(void)
         // Affichage (adapte selon ton besoin : sauvegarde, log, etc.)
         printf("i=%zu  SOC=%.6f  SOH=%.6f  SOE=%.6f\n", i, SOC_i, SOH_i, SOE_i);
     }
+
+        Free_donnees(courant, tension, temperature, SOH, SOC_simu);
+
 }
 
 int main() {
