@@ -33,8 +33,8 @@ float estimation_SOH(float SOC,
                      float *SOC_eval_SOH_precedent,
                      float *SOH_filtre_km1,
                      float *SOH_depouille_km1,
-                     float SOH_courant)
-{
+                     float SOH_courant){
+                        
     // Comptage du courant
     *integrale_courant += courant * dt;
 

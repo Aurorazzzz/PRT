@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include "SOE_Theo.h"
+#include "Read_Write.h"
+
 
 // ============================================================================
 // Interpolation linéaire rapide 1D : équivalent de "interp1rapide" MATLAB
@@ -50,3 +52,26 @@ float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
     return SOE_pred;
 }
 
+void setup(){
+    // Initialisation des entrées
+    const float *courant;
+    const float *tension;
+    const float *temperature;
+    const float *SOH;
+    const float *SOC_simu;
+
+    // Initialisation des coefficients du filtre 
+    const float a_filtre[] = {1, -0.969067417193793 };
+    const float b_filtre[] = {0.0154662914031034,	0.0154662914031034 };
+
+    Charge_donnees(&courant, &tension, &temperature, &SOH, &SOC_simu);
+
+    estimation_SOE( SOC,  SOH,  moins_eta_sur_Q, *X_OCV, *LOI_INTEG_OCV_DECHARGE, n);
+
+    Free_donnees(courant, tension, temperature, SOH, SOC_simu);
+}
+
+int main() {
+    setup();
+    printf("Fin du programme\n");
+}
