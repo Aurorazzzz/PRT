@@ -1,40 +1,27 @@
-/* estimation_SOH.h
- * Prototype de la fonction d'estimation du SOH (C simple précision).
- * Aucune dépendance externe ; compatible C et C++.
- *
- * Auteur : (vous)
- * Licence : à définir
- */
+// ============================================================================
+// Estimation du SOH (traduction C du script MATLAB)
+// Entrées :
+//   SOC                         : état de charge actuel [0..1]
+//   courant                     : courant instantané (A)
+//   dt                          : pas de temps (s)
+//   changement_etat             : 0/1 (bascule charge<->décharge détectée)
+//   integrale_courant_neuf      : intégrale de courant à neuf (A·s) = Q_neuf / η
+//   a_filtre_SOH[2], b_filtre_SOH[2] : coeffs du filtre IIR d'ordre 1
+//   *integrale_courant          : intégrale depuis la dernière estimation (A·s) [in/out]
+//   *SOC_eval_SOH_precedent     : SOC mémorisé au dernier calcul de SOH [in/out]
+//   *SOH_filtre_km1             : SOH filtré(k-1) [in/out]
+//   *SOH_depouille_km1          : SOH dépouillé(k-1) [in/out]
+//   SOH_courant                 : SOH courant (valeur de repli / saturation) [in]
+// Sortie :
+//   SOH filtré mis à jour (si estimation effectuée), sinon SOH_courant.
+// Remarques :
+//   - Comptage coulombmétrique cumulé entre deux changements d’état.
+//   - Estimation déclenchée si |∫I dt| > 10% de la pleine charge à neuf.
+//   - « Règle de trois » puis filtrage IIR d’ordre 1.
+//   - Saturation [0,1] sur la valeur dépouillée (sinon on garde SOH_courant).
+// ============================================================================
+static inline float f_abs(float x) { return (x < 0.0f) ? -x : x; }
 
-#ifndef ESTIMATION_SOH_H
-#define ESTIMATION_SOH_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * @brief Estime et filtre le SOH à la détection d'un changement d'état (charge↔décharge).
- *
- * Forme du filtre IIR d'ordre 1 utilisée :
- *   SOH(k) = (-a2 * SOH(k-1) + b1 * x(k) + b2 * x(k-1)) / a1
- * où x(k) est le SOH « dépouillé » (non filtré) estimé à l'instant k.
- *
- * @param SOC                         État de charge actuel [0..1].
- * @param courant                     Courant instantané (A).
- * @param dt                          Pas de temps (s).
- * @param changement_etat             0/1 : front de bascule charge↔décharge.
- * @param integrale_courant_neuf      Intégrale de courant à neuf (A·s) ≈ capacité utile/η.
- * @param a_filtre_SOH                Coefficients a[2] du filtre (a1, a2).
- * @param b_filtre_SOH                Coefficients b[2] du filtre (b1, b2).
- * @param integrale_courant           [in/out] Intégrale ∫I·dt accumulée depuis la dernière bascule (A·s).
- * @param SOC_eval_SOH_precedent      [in/out] SOC mémorisé lors de la précédente bascule.
- * @param SOH_filtre_km1              [in/out] Dernière valeur filtrée SOH(k-1).
- * @param SOH_depouille_km1           [in/out] Dernière valeur dépouillée x(k-1).
- * @param SOH_courant                 Valeur de repli/initiale du SOH si pas de mise à jour.
- *
- * @return SOH courant (nouveau SOH filtré si mise à jour, sinon SOH_courant).
- */
 float estimation_SOH(float SOC,
                      float courant,
                      float dt,
@@ -46,10 +33,42 @@ float estimation_SOH(float SOC,
                      float *SOC_eval_SOH_precedent,
                      float *SOH_filtre_km1,
                      float *SOH_depouille_km1,
-                     float SOH_courant);
+                     float SOH_courant)
+{
+    // Comptage du courant
+    *integrale_courant += courant * dt;
 
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
+    if (changement_etat) {
+        // Condition d'activation (>10% de la pleine charge à neuf)
+        int condition_SOH = (f_abs(*integrale_courant) / integrale_courant_neuf > 0.1f);
 
-#endif /* ESTIMATION_SOH_H */
+        if (condition_SOH) {
+            // Estimation « règle de trois »
+            float delta_SOC = (*SOC_eval_SOH_precedent - SOC);
+            float denom = delta_SOC * integrale_courant_neuf;
+            float SOH_depouille = (denom != 0.0f) ? (*integrale_courant) / denom : SOH_courant;
+
+            // Saturation / garde-fou
+            if (SOH_depouille > 1.0f || SOH_depouille < 0.0f) {
+                SOH_depouille = SOH_courant;
+            }
+
+            // Filtre IIR (ordre 1)
+            float SOH_new = (-a_filtre_SOH[1] * (*SOH_filtre_km1)
+                             + b_filtre_SOH[0] * SOH_depouille
+                             + b_filtre_SOH[1] * (*SOH_depouille_km1))
+                            / a_filtre_SOH[0];
+
+            // Mise à jour des états
+            *SOH_filtre_km1    = SOH_new;
+            *SOH_depouille_km1 = SOH_depouille;
+            SOH_courant        = SOH_new;
+        }
+
+        // Mémorisation & RAZ intégrale
+        *SOC_eval_SOH_precedent = SOC;
+        *integrale_courant = 0.0f;
+    }
+
+    return SOH_courant;
+}
