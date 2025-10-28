@@ -6,7 +6,7 @@
 
 void setup() {
 
-
+  // A déplacer dans le main ou à déclarer en variables globales
  const float *courant;
  const float *tension;
  const float *temperature;
@@ -427,8 +427,8 @@ const float ECART_TYPE[] = {
 
   // initialisation de la communication pour les résultats
   // Serial.begin(9600);
-  printf("");
-  printf("");
+  //printf("");
+  //printf("");
 
   // simulation
   // Aurore : Mesure du temps de simulation, a régler plus tard
