@@ -2,12 +2,14 @@
 
 void Charge_donnees (const float **courant,const float **tension, const float **temperature, const float **SOH, const float **SOC) {
     char *fichiers[] = {"courant.bin", "tension.bin", "temperature.bin",  "SOH.bin", "SOC.bin"};
-    const float **donnees[] = { courant, tension, temperature, SOH, SOC };
+    //tableau avec les adresses des pointeurs
+    const float **donnees[] = {courant, tension, temperature, SOH, SOC };
     int nFichiers = 5;
     
     size_t N = 4841577; // nombre d'éléments dans ton fichier
 
     for(int k = 0; k < nFichiers; k++) {
+        //on modifie l'adresse vers laquel pointe le pointeur (dereferencement donnees)
         *donnees[k] = malloc(N * sizeof(float));
         if(*donnees[k] == NULL) {
             printf("Erreur allocation mémoire\n");
