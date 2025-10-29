@@ -50,7 +50,7 @@ void calcul_vecteur_SOH(){
     float SOH_n_1 = 1;
     float SOH_pre_filtre_n_1 = 1;
     float *pointeur_SOH_n_1 = &SOH_n_1;
-    float *pointeur_SOH_pre_filtre_n_1 = &SOH_n_1;
+    float *pointeur_SOH_pre_filtre_n_1 = &SOH_pre_filtre_n_1;
 
     //Initialisation du SOH
     float SOH = 1;
@@ -66,18 +66,20 @@ void calcul_vecteur_SOH(){
         calcul_SOH(pointeur_integrale_courant, -courant[z], changement_etat, dt, integrale_courant_neuf, pointeur_SOC_precedent, SOC[z], pointeur_SOH,
              pointeur_SOH_n_1, pointeur_SOH_pre_filtre_n_1, a_filtre, b_filtre);
 
+        //vecteur_SOH[z] = *(pointeur_SOH);
         vecteur_SOH[z] = *(pointeur_SOH);
         printf("%f\n", *(pointeur_SOH));
     }
 
     Free_donnees(courant, tension, temperature, SOH_simu, SOC);
-    Ecriture_result(vecteur_SOH, NbIteration, "SOH_raspy_c");
+    Ecriture_result(vecteur_SOH, NbIteration, "SOH_ordi");
 }
 
 void calcul_SOH(float *integrale_courant, const float courant, bool changement_etat, const float dt, const float integrale_courant_neuf, 
     float *SOC_precedent, const float SOC, float *SOH, float *y_n_1, float *x_n_1, const float a_filtre[], const float b_filtre[]){
-    *integrale_courant += courant*dt; 
+    *integrale_courant = *integrale_courant + courant*dt; 
     
+
     if (changement_etat){
         // condition : l'intégrale de courant parcourue depuis la dernière
         // estimation représente au moins 10% de la pleine charge à neuf
@@ -111,7 +113,7 @@ void calcul_SOH(float *integrale_courant, const float courant, bool changement_e
         //printf("Le SOC egal");
         //printf("%f\f", *SOC_precedent);
         //printf("%f\f", SOC);
-        integrale_courant = 0;
+        *integrale_courant = 0;
 
     }
 }
