@@ -13,7 +13,7 @@
 //   x       : valeur d’interpolation (ici le SOC)
 // Sortie : valeur interpolée
 // ============================================================================
-static float interp1rapide(const float *x_tab, const float *y_tab, int n, float x)
+float interp1rapide(const float *x_tab, const float *y_tab, int n, float x)
 {
     if (n <= 0) return 0.0f;
     if (x <= x_tab[0])     return y_tab[0];
@@ -41,7 +41,7 @@ static float interp1rapide(const float *x_tab, const float *y_tab, int n, float 
 //   n                       : taille de ces tables
 // Sortie : SOE_pred (Joules ou unité cohérente avec la table)
 // ============================================================================
-static float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
+float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
                             const float *X_OCV, const float *LOI_INTEG_OCV_DECHARGE, int n)
 {
     // garde-fous
@@ -69,6 +69,16 @@ void setup(void)
     const float *temperature= NULL;
     const float *SOH        = NULL;
     const float *SOC_simu   = NULL;
+
+    //Initialisation du nombre de données simulées
+    const int NbIteration = 1000000;
+
+    //Initialisation du vecteur contenant le SOC :
+    float *vecteur_SOE = malloc(NbIteration * sizeof(float));
+    if (!vecteur_SOE) {
+        perror("Erreur allocation mémoire");
+        return;
+    }
 
     // === Comptage coulombmétrique ===
     float moins_eta_sur_Q = 2.300303904920101e-04f;
@@ -105,23 +115,27 @@ void setup(void)
     Charge_donnees(&courant, &tension, &temperature, &SOH, &SOC_simu);
 
         // === Calcul du SOE pour chaque échantillon ===
-    for (size_t i = 0; i < 1000000; ++i) {
+    for (size_t i = 0; i < NbIteration; ++i) {
         float SOC_i = SOC_simu[i];  // SOC simulé à l’instant i
         float SOH_i = SOH[i];       // SOH courant (si constant, le buffer contiendra la même valeur)
 
         float SOE_i = estimation_SOE(SOC_i, SOH_i, moins_eta_sur_Q,
                                      X_OCV, LOI_INTEG_OCV_DECHARGE, 104);
 
+        vecteur_SOE[i] = SOE_i;
         // Affichage (adapte selon ton besoin : sauvegarde, log, etc.)
-        printf("i=%zu  SOC=%.6f  SOH=%.6f  SOE=%.6f\n", i, SOC_i, SOH_i, SOE_i);
+        //printf("i=%zu  SOC=%.6f  SOH=%.6f  SOE=%.6f\n", i, SOC_i, SOH_i, SOE_i);
     }
 
-        Free_donnees(courant, tension, temperature, SOH, SOC_simu);
+    Ecriture_result(vecteur_SOE, NbIteration, "SOE_raspi_result");
+
+    Free_donnees(courant, tension, temperature, SOH, SOC_simu);
+
 
 }
 
 int main() {
     setup();
-    printf("Fin du programme\n");
+    printf("Fin du programme !\n");
     return 0;
 }//protect 
