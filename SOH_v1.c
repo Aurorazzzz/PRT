@@ -21,8 +21,8 @@ void calcul_vecteur_SOH(){
     }
 
     // Initialisation des coefficients du filtre 
-    const float a_filtre[] = {1, -0.969067417193793 };
-    const float b_filtre[] = {0.0154662914031034,	0.0154662914031034 };
+    const double a_filtre[] = {1, -0.969067417193793 };
+    const double b_filtre[] = {0.0154662914031034,	0.0154662914031034 };
 
     //Initialisation variables charge décharge
     const int taille_tampon = 60;
@@ -76,7 +76,7 @@ void calcul_vecteur_SOH(){
 }
 
 void calcul_SOH(float *integrale_courant, const float courant, bool changement_etat, const float dt, const float integrale_courant_neuf, 
-    float *SOC_precedent, const float SOC, float *SOH, float *y_n_1, float *x_n_1, const float a_filtre[], const float b_filtre[]){
+    float *SOC_precedent, const float SOC, float *SOH, float *y_n_1, float *x_n_1, const double a_filtre[], const double b_filtre[]){
     *integrale_courant = *integrale_courant + courant*dt; 
     
 

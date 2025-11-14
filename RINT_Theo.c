@@ -27,7 +27,7 @@ void estimation_RINT_step(float tension,
 
     // --- Inhibition selon le script MATLAB ---
     int inhibition = (f_absf(delta_I) < 0.1f) || (SOC > 0.8f) || (SOC < 0.2f);
-
+/
     // --- Estimation brute R = -ΔU/ΔI et filtrage IIR d'ordre 1 (si pas d'inhibition) ---
     float R = *RINT;  // valeur de repli si inhibition
     if (!inhibition) {
@@ -52,7 +52,7 @@ void estimation_RINT_step(float tension,
             *RINTkm1       = R;
         }
     }
-
+    printf("%f\n", R);
     // --- Phase d'attente/compteur + calcul SOHR ---
     if (*compteur_RINT < 250000.0f) {
         *compteur_RINT += 1.0f;
@@ -89,13 +89,18 @@ void setup(void)
     const float *SOC_simu    = NULL;
 
     // Charge les données depuis l infrastructure commune
-    size_t nb_samples = 1000000; // à adapter selon ta source
+    const int NbIteration = 10000; // à adapter selon ta source
     Charge_donnees(&courant, &tension, &temperature, &SOH, &SOC_simu);
 
-    // === Coefficients du filtre IIR d'ordre 1 (à remplacer par tes valeurs issues du .mat) ===
-    // Exemple passe-bas symétrique (placeholders) — mets ici tes vrais a,b
-    const float a_filtre_RINT[2] = { 1.0f, -0.95f };     // a1, a2
-    const float b_filtre_RINT[2] = { 0.025f, 0.025f };   // b1, b2
+    float *vecteur_RINT = malloc(NbIteration * sizeof(float));
+    if (!vecteur_RINT) {
+        perror("Erreur allocation mémoire");
+        return;
+    }
+
+    // === Coefficients du filtre IIR d'ordre 1 
+    const float a_filtre_RINT[2] = { 1.0f, -1.0f };     // a1, a2
+    const float b_filtre_RINT[2] = { 0.00001570771653f, 0.0000157077165f };   // b1, b2
 
     // === États internes (initialisation alignée sur le script) ===
     float RINT                = 0.018f;
@@ -109,9 +114,9 @@ void setup(void)
     float SOHR                = 1.0f;
 
     // === Boucle d estimation ===
-    for (size_t i = 0; i < nb_samples; ++i) {
+    for (size_t i = 0; i < NbIteration; ++i) {
         float U   = tension[i];
-        float I   = courant[i];
+        float I   = -courant[i];
         float SOC = SOC_simu[i];
 
         estimation_RINT_step(U, I, SOC,
@@ -121,12 +126,16 @@ void setup(void)
                              &tension_precedente, &courant_precedent,
                              &compteur_RINT, &RINT_ref);
 
+        vecteur_RINT[i] = RINT;
+        //printf("%f\n", RINT);
+
         // (optionnel) export/log, par ex. :
         // printf("%zu;%.6f;%.6f\n", i, RINT, SOHR);
     }
 
     // Libération des buffers
     Free_donnees(courant, tension, temperature, SOH, SOC_simu);
+    Ecriture_result(vecteur_RINT, NbIteration, "RINT_ordi");
 }
 
 int main(void)
