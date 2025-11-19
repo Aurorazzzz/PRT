@@ -11,11 +11,11 @@ void estimation_RINT_step(float tension,
                           float SOC,
                           const float a_filtre_RINT[2],
                           const float b_filtre_RINT[2],
-                          float *RINT,
+                          double *RINT,
                           float *SOHR,
                           float *RINT_INIT,
-                          float *RINTkm1,
-                          float *RINTfiltrekm1,
+                          double *RINTkm1,
+                          double *RINTfiltrekm1,
                           float *tension_precedente,
                           float *courant_precedent,
                           float *compteur_RINT,
@@ -24,36 +24,37 @@ void estimation_RINT_step(float tension,
     // --- Différentielles ---
     float delta_U = tension - *tension_precedente;
     float delta_I = courant - *courant_precedent;
-
+    //printf("%f\n", SOC);
+    //printf("%f\n", delta_I);
     // --- Inhibition selon le script MATLAB ---
     int inhibition = (f_absf(delta_I) < 0.1f) || (SOC > 0.8f) || (SOC < 0.2f);
-/
     // --- Estimation brute R = -ΔU/ΔI et filtrage IIR d'ordre 1 (si pas d'inhibition) ---
-    float R = *RINT;  // valeur de repli si inhibition
+    double R = *RINT;  // valeur de repli si inhibition
     if (!inhibition) {
+        printf("Inib");
         if (delta_I != 0.0f) {
             R = -delta_U / delta_I;
-        } else {
-            // division par 0 -> on reste sur la valeur courante
-            R = *RINT;
         }
+
+        //*RINT = R;
 
         // Filtre : RINT_k = (-a2 * RINT(k-1) + b1 * R + b2 * R(k-1)) / a1
         float a1 = a_filtre_RINT[0];
         float a2 = a_filtre_RINT[1];
         float b1 = b_filtre_RINT[0];
         float b2 = b_filtre_RINT[1];
+        printf("%.10f\n", R);
+        printf("%.10f\n", *RINTfiltrekm1);
+        printf("%.10f\n", *RINTkm1);
+        *RINT = (-a2 * (*RINTfiltrekm1) + b1 * R + b2 * (*RINTkm1)) / a1;
+        printf("%.10f\n", *RINT);
+        *RINTfiltrekm1 = *RINT;
+        *RINTkm1       = R;
 
-        if (a1 == 0.0f) {
-            // garde-fou : si a1 nul, ne pas mettre à jour
-        } else {
-            *RINT = (-a2 * (*RINTfiltrekm1) + b1 * R + b2 * (*RINTkm1)) / a1;
-            *RINTfiltrekm1 = *RINT;
-            *RINTkm1       = R;
-        }
     }
-    printf("%f\n", R);
-    // --- Phase d'attente/compteur + calcul SOHR ---
+
+    printf("%.10f\n", *RINT);
+    //--- Phase d'attente/compteur + calcul SOHR ---
     if (*compteur_RINT < 250000.0f) {
         *compteur_RINT += 1.0f;
         *SOHR = 1.0f;
@@ -89,7 +90,7 @@ void setup(void)
     const float *SOC_simu    = NULL;
 
     // Charge les données depuis l infrastructure commune
-    const int NbIteration = 10000; // à adapter selon ta source
+    const int NbIteration = 1000000; 
     Charge_donnees(&courant, &tension, &temperature, &SOH, &SOC_simu);
 
     float *vecteur_RINT = malloc(NbIteration * sizeof(float));
@@ -99,14 +100,14 @@ void setup(void)
     }
 
     // === Coefficients du filtre IIR d'ordre 1 
-    const float a_filtre_RINT[2] = { 1.0f, -1.0f };     // a1, a2
+    const float a_filtre_RINT[2] = { 1.0f, -0.999968584566934f };     // a1, a2
     const float b_filtre_RINT[2] = { 0.00001570771653f, 0.0000157077165f };   // b1, b2
 
     // === États internes (initialisation alignée sur le script) ===
-    float RINT                = 0.018f;
+    double RINT                = 0.018f;
     float RINT_INIT           = -1.0f;
-    float RINTkm1             = 0.018f;
-    float RINTfiltrekm1       = 0.018f;
+    double RINTkm1             = 0.018f;
+    double RINTfiltrekm1       = 0.018f;
     float tension_precedente  = 0.0f;
     float courant_precedent   = 1.0f;
     float compteur_RINT       = 0.0f;
@@ -114,11 +115,11 @@ void setup(void)
     float SOHR                = 1.0f;
 
     // === Boucle d estimation ===
-    for (size_t i = 0; i < NbIteration; ++i) {
+    for (int i = 0; i < NbIteration; ++i) {
         float U   = tension[i];
         float I   = -courant[i];
         float SOC = SOC_simu[i];
-
+        printf("%d\n", i);
         estimation_RINT_step(U, I, SOC,
                              a_filtre_RINT, b_filtre_RINT,
                              &RINT, &SOHR, &RINT_INIT,
@@ -127,8 +128,7 @@ void setup(void)
                              &compteur_RINT, &RINT_ref);
 
         vecteur_RINT[i] = RINT;
-        //printf("%f\n", RINT);
-
+        // printf("%f\n", courant_precedent);
         // (optionnel) export/log, par ex. :
         // printf("%zu;%.6f;%.6f\n", i, RINT, SOHR);
     }
