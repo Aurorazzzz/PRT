@@ -6,16 +6,6 @@
 
 // ============================================================================
 // Fonction principale : surveillance température (équivalent MATLAB)
-// Entrées :
-//   courant, temperature       : mesures instantanées
-//   *T1, *T2                   : états thermiques internes (in/out)
-//   R1, C1, R2, C2             : paramètres du modèle thermique
-//   seuil_alerte_temperature   : seuil absolu entre Tmesurée et T2
-//   TAMB                       : température ambiante
-//   dt                         : pas de temps
-// Sorties :
-//   *T1, *T2                   : états internes mis à jour
-//   *alerte                    : 1 si |temperature - T2| > seuil
 // ============================================================================
 void surveillance_temperature(float courant,
                               float temperature,
@@ -32,9 +22,11 @@ void surveillance_temperature(float courant,
 {
     // Modèle thermique Foster d'ordre 2
     *T1 = *T1 + dt * (R1_modele_thermique * courant * courant +
-                      TAMB - *T1) / (R1_modele_thermique * C1_modele_thermique);
+                      TAMB - *T1) /
+                      (R1_modele_thermique * C1_modele_thermique);
 
-    *T2 = *T2 + dt * (*T1 - *T2) / (R2_modele_thermique * C2_modele_thermique);
+    *T2 = *T2 + dt * (*T1 - *T2) /
+                      (R2_modele_thermique * C2_modele_thermique);
 
     // Détection d'écart température mesurée vs modèle
     float diff = fabsf(temperature - *T2);
@@ -62,15 +54,19 @@ void setup(void)
         return;
     }
 
-    // Paramètres du modèle thermique (à adapter selon les données MATLAB)
-    float R1 = 0.5f;
-    float C1 = 1500.0f;
-    float R2 = 0.7f;
-    float C2 = 2500.0f;
-    float seuil = 10.0f;
-    float TAMB = 25.0f;
-    float dt = 1.0f;
+    // =====================================================================
+    // Paramètres EXACTS du modèle thermique MATLAB
+    // =====================================================================
+    const float R1_modele_thermique = 0.206124119186158f;
+    const float C1_modele_thermique = 50.3138901982787f;
+    const float R2_modele_thermique = 21.6224372540937f;
+    const float C2_modele_thermique = 15.8943772584241f;
 
+    const float seuil = 10.0f;   // conforme MATLAB
+    const float TAMB  = 25.0f;   // conforme MATLAB
+    const float dt    = 1.0f;    // conforme MATLAB
+
+    // Conditions initiales MATLAB
     float T1 = 60.0f;
     float T2 = 30.0f;
 
@@ -86,8 +82,8 @@ void setup(void)
             temperature[i],
             &T1,
             &T2,
-            R1, C1,
-            R2, C2,
+            R1_modele_thermique, C1_modele_thermique,
+            R2_modele_thermique, C2_modele_thermique,
             seuil,
             TAMB,
             dt,
@@ -99,16 +95,21 @@ void setup(void)
     }
 
     // Sauvegarde
-    Ecriture_result(vecteur_T2, NbIteration, "TEMPERATURE_MODEL_raspi_result");
-    Ecriture_result(vecteur_alerte, NbIteration, "ALERTE_TEMPERATURE_raspi_result");
+    Ecriture_result(vecteur_T2, NbIteration, "TEMPERATURE_MODEL_PC_result");
+    Ecriture_result(vecteur_alerte, NbIteration, "ALERTE_TEMPERATURE_PC_result");
+
 
     Free_donnees(courant, tension, temperature, SOH, SOC_simu);
 
     free(vecteur_T2);
     free(vecteur_alerte);
+
+    printf("R1 = %.12f, C1 = %.12f\n", R1_modele_thermique, C1_modele_thermique);
+    printf("R2 = %.12f, C2 = %.12f\n", R2_modele_thermique, C2_modele_thermique);
+
 }
 
-int main()
+int main(void)
 {
     setup();
     printf("Fin du programme !\n");
