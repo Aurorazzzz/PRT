@@ -32,6 +32,7 @@ float interp1rapide(const float *X, const float *Y, int n, float x) {
     if (x >= X[n - 1])  return Y[n - 1];
 
     int i = 0;
+    // Recherche de i 
     while (i < n - 1 && !(x >= X[i] && x <= X[i + 1])) ++i;
     if (i >= n - 1) return Y[n - 1];
 
@@ -61,6 +62,7 @@ void estimation_RUL(float SOH,
 {
     /* 1) Accumulateur de demi-cycles (selon ton MATLAB) */
     if (dt > 0.0f) *integrale_SOC += f_absf(delta_SOC) / dt;
+    printf("%f\n", *integrale_SOC);
 
     /* 2) Déclenchement quand floor(integrale_SOC/2) augmente */
     int declenche = 0;
@@ -71,25 +73,29 @@ void estimation_RUL(float SOH,
     }
 
     if (declenche) {
-        /* Prédiction état x=[RUL; v] */
+        // Creation du vecteur Xk avec l'etat present
         float x_k[2] = { *RUL_est, *vitesse_degradation };
         float x_pred[2];
+        // calcul de l'etat predit (k|k-1)
         mat2_vec2(Fk_RUL, x_k, x_pred);
 
         /* Pkkm1 = F P F' + Q */
+        // Calcul de Pkkm1
         float FP[4], FT[4], Pkkm1[4];
         mat2_mul(Fk_RUL, Pk_RUL, FP);
         mat2_transpose(Fk_RUL, FT);
         mat2_mul(FP, FT, Pkkm1);
+        //Ajout de Qk
         Pkkm1[0] += Qk_RUL[0]; Pkkm1[1] += Qk_RUL[1];
         Pkkm1[2] += Qk_RUL[2]; Pkkm1[3] += Qk_RUL[3];
 
         /* Mesure z = RUL_modele(SOH) via loi RUL(SOH) */
+        // On trouve RUL_est
         float z_mes = interp1rapide(X_Loi_RUL, Y_Loi_RUL, n_loi, SOH);
 
         /* Résidu */
-        float Hx = Hk_RUL[0]*x_pred[0] + Hk_RUL[1]*x_pred[1];
-        float residu = z_mes - Hx;
+        //float Hx = Hk_RUL[0]*x_pred[0] + Hk_RUL[1]*x_pred[1];
+        float residu = z_mes - x_pred[0];
 
         /* Innovation Sk = H Pkkm1 H' + R */
         float HP0 = Hk_RUL[0]*Pkkm1[0] + Hk_RUL[1]*Pkkm1[2];
@@ -126,6 +132,10 @@ void estimation_RUL(float SOH,
     *RUL_corrige = (*vitesse_degradation != 0.0f)
                  ? (*RUL_est) / (*vitesse_degradation)
                  : 0.0f;
+    
+    printf("%f\n", *RUL_est);
+    printf("%f\n", *RUL_corrige);
+
 }
 
 /* ================== Setup d'exemple ================== */
@@ -133,7 +143,7 @@ void setup(void)
 {
     /* Entrées (buffers fournis par Read_Write.h) */
     const float *courant = NULL, *tension = NULL, *temperature = NULL;
-    const float *SOH_buf = NULL, *SOC_buf = NULL;
+    const float *SOH_vec = NULL, *SOC = NULL;
 
     /* Adapter cette valeur à la taille réelle de tes buffers */
     const size_t NbIteration = 1000000;
@@ -142,23 +152,23 @@ void setup(void)
     if (!vecteur_RUL) { perror("malloc vecteur_RUL"); return; }
 
     /* Charge les données */
-    Charge_donnees(&courant, &tension, &temperature, &SOH_buf, &SOC_buf);
+    Charge_donnees(&courant, &tension, &temperature, &SOH_vec, &SOC);
 
-    /* Paramètres Kalman (exemple) */
+    /* Paramètres Kalman */
     float dt = 1.0f;
-    float F[4]  = { 1.0f, -dt, 0.0f, 1.0f };
+    float F[4]  = { 1.0f, -1, 0.0f, 1.0f };
     float H[2]  = { 1.0f,  0.0f };
-    float Q[4]  = { 1e-4f, 0.0f, 0.0f, 1e-6f };
-    float R     = 1e-3f;
-    float P[4]  = { 1.0f, 0.0f, 0.0f, 1.0f };
+    float Q[4]  = { 6.8870745, 0.0f, 0.0f, 1.0017803e-5f };
+    float R     = 9.9969953e+4f;
+    float P[4]  = { 989.54010f, -1.4191452f, -1.4191453f, 0.0129244f };
 
-    /* Loi RUL(SOH) — à remplacer par tes vraies tables */
-    static const float X_Loi_RUL[5] = { 0.70f, 0.80f, 0.90f, 0.95f, 1.00f };
-    static const float Y_Loi_RUL[5] = { 200.0f, 400.0f, 800.0f, 1200.0f, 2000.0f };
-    const int n_loi = 5;
+    /* Loi RUL(SOH) */
+    static const float X_Loi_RUL[9] = { 0.7146760f, 0.7777946f, 0.8302932f, 0.8483074f, 0.8658035f, 0.8909407f, 0.9458607f, 0.9985912f, 1.0f };
+    static const float Y_Loi_RUL[9] = { -3.5574283e2f, -1.0574284e2f, 144.25717f, 244.25717f, 394.25717f, 644.25714, 1144.2572, 1594.2572, 1644.2572 };
+    const int n_loi = 9;
 
     /* États internes */
-    float RUL_est = Y_Loi_RUL[n_loi - 1];
+    float RUL_est = interp1rapide(X_Loi_RUL, Y_Loi_RUL, n_loi, 1.0);
     float v_deg   = 1.0f;
     float integSOC = 0.0f;
     int   cycles   = 0;
@@ -166,8 +176,8 @@ void setup(void)
 
     /* Boucle principale : on remplit vecteur_RUL avec le RUL corrigé */
     for (size_t i = 0; i < NbIteration; ++i) {
-        float SOH = SOH_buf[i];
-        float delta_SOC = (i > 0) ? (SOC_buf[i] - SOC_buf[i - 1]) : 0.0f;
+        float SOH = SOH_vec[i];
+        float delta_SOC = (i > 0) ? (SOC[i] - SOC[i - 1]) : 0.0f;
 
         /* Recalc F si dt varie */
         F[0] = 1.0f; F[1] = -dt; F[2] = 0.0f; F[3] = 1.0f;
@@ -185,8 +195,7 @@ void setup(void)
 
     /* Écriture du résultat et nettoyage */
     Ecriture_result(vecteur_RUL, (int)NbIteration, "RUL_raspi_result");
-    free(vecteur_RUL);
-    Free_donnees(courant, tension, temperature, SOH_buf, SOC_buf);
+    Free_donnees(courant, tension, temperature, SOH_vec, SOC);
 }
 
 
