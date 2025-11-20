@@ -1,42 +1,39 @@
 #ifndef SURVEILLANCE_TENSION_H
 #define SURVEILLANCE_TENSION_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdio.h>
 
-/**
- * Surveillance de la tension cellule
- *
- * Entrées :
- *   courant         : courant instantané (A)
- *   SOC             : état de charge [0..1]
- *   tension_mesuree : tension mesurée (V)
- *   etat            : 1 = décharge, 0 = charge
- *   X_OCV           : grille SOC pour les lois OCV        (taille n_OCV)
- *   Y_OCV_charge    : loi OCV en charge                   (taille n_OCV)
- *   Y_OCV_decharge  : loi OCV en décharge                 (taille n_OCV)
- *   n_OCV           : taille des tableaux OCV
- *   dt              : pas de temps (s)
- *   R1, C1          : paramètres du réseau RC
- *   R0              : résistance série
- *   seuil_alerte    : seuil sur |tension_mesuree - U_modele|
- *
- * In/Out :
- *   Ir              : état interne du modèle RC (courant dans la branche R1-C1)
- *
- * Sorties :
- *   U               : tension modèle calculée
- *   alerte          : 0 ou 1 suivant dépassement du seuil
- */
+// ============================================================================
+// Interpolation linéaire 1D (équivalent MATLAB interp1)
+// ============================================================================
+float interp1rapide(const float *x_tab,
+                    const float *y_tab,
+                    int n,
+                    float x);
+
+// ============================================================================
+// Détection de phase charge/décharge (reproduction strict de MATLAB)
+// ----------------------------------------------------------------------------
+// état = 0 --> charge
+// état = 1 --> décharge
+// ============================================================================
+void detection_phase_charge_decharge(float courant,
+                                     float tampon_charge_decharge[60],
+                                     int *etat,
+                                     int *etat_precedent);
+
+// ============================================================================
+// Modèle de tension dynamique
+// (équivalent MATLAB surveillance_tension.m)
+// ============================================================================
 void surveillance_tension(float courant,
                           float SOC,
                           float tension_mesuree,
-                          int   etat,
+                          int etat,  // 0 = charge, 1 = décharge
                           const float *X_OCV,
                           const float *Y_OCV_charge,
                           const float *Y_OCV_decharge,
-                          int   n_OCV,
+                          int n_OCV,
                           float dt,
                           float R1,
                           float C1,
@@ -44,13 +41,6 @@ void surveillance_tension(float courant,
                           float seuil_alerte,
                           float *Ir,
                           float *U,
-                          int   *alerte);
+                          int *alerte);
 
-/* Fonction d’initialisation / boucle principale, comme dans SOE_Theo.c */
-void setup(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* SURVEILLANCE_TENSION_H */
+#endif // SURVEILLANCE_TENSION_H
