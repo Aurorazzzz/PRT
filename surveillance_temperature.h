@@ -26,7 +26,7 @@ void surveillance_temperature(float courant,
 // ============================================================================
 // Prototype du setup (programme autonome)
 // ============================================================================
-void setup(void);
+void TEMP_setup(void);
 
 #ifdef __cplusplus
 }

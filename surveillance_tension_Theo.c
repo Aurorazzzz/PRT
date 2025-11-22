@@ -54,7 +54,7 @@ void surveillance_tension(float courant,
 // ============================================================================
 // setup
 // ============================================================================
-void setup(void)
+void TENSION_setup(void)
 {
     const float *courant = NULL;
     const float *tension = NULL;
@@ -145,10 +145,10 @@ void setup(void)
     free(vecteur_alerte);
 }
 
-
+/*
 int main()
 {
-    setup();
+    TENSION_setup();
     printf("Fin du programme !\n");
     return 0;
-}
+}*/

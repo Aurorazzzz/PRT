@@ -21,8 +21,9 @@ void Charge_donnees (const float **courant,const float **tension, const float **
     for(int k = 0; k < nFichiers; k++) {
     // Si besoin, tu peux construire un chemin complet
     char chemin[256];
-    snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
-    printf(chemin);
+    //snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
+    snprintf(chemin, sizeof(chemin), "donnees/%s", fichiers[k]);
+    //printf(chemin);
     
     FILE *fp;
     // Ouverture du fichier binaire
@@ -42,8 +43,8 @@ void Charge_donnees (const float **courant,const float **tension, const float **
 
     fclose(fp);
 
-    printf("Premier : %f\n", (*donnees[k])[0]);
-    printf("Dernier : %f\n", (*donnees[k])[N-1]);
+    //printf("Premier : %f\n", (*donnees[k])[0]);
+    //printf("Dernier : %f\n", (*donnees[k])[N-1]);
     }
 }
 
@@ -58,8 +59,8 @@ void Free_donnees (const float *courant, const float *tension, const float *temp
 int Ecriture_result(float *data, const int NbIteration, const char *nom_fichier){
   char nom_fichier_ext[50];
   snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), "%s.bin", nom_fichier);
-  printf("Nom du fichier :");
-  printf("%s\n", nom_fichier_ext);
+  //printf("Nom du fichier :");
+  //printf("%s\n", nom_fichier_ext);
   FILE *f = fopen(nom_fichier_ext, "wb");
   if (!f) {
         perror("Erreur ouverture fichier");
@@ -72,7 +73,8 @@ int Ecriture_result(float *data, const int NbIteration, const char *nom_fichier)
 
     fclose(f);
 
-    free(data);
+    //free(data);  
+
     return 0;
 }
 

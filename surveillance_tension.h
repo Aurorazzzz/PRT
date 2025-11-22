@@ -43,4 +43,6 @@ void surveillance_tension(float courant,
                           float *U,
                           int *alerte);
 
+void TENSION_setup(void);
+
 #endif // SURVEILLANCE_TENSION_H

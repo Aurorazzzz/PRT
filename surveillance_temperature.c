@@ -36,7 +36,7 @@ void surveillance_temperature(float courant,
 // ============================================================================
 // Programme autonome — similaire aux fichiers SOE_Theo / SOH_Theo
 // ============================================================================
-void setup(void)
+void TEMP_setup(void)
 {
     const float *courant = NULL;
     const float *tension = NULL;
@@ -108,10 +108,10 @@ void setup(void)
     printf("R2 = %.12f, C2 = %.12f\n", R2_modele_thermique, C2_modele_thermique);
 
 }
-
+/*
 int main(void)
 {
-    setup();
+    TEMP_setup();
     printf("Fin du programme !\n");
     return 0;
-}
+}*/
