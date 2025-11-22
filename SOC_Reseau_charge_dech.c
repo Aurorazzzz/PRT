@@ -4,7 +4,7 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
-void setup() {
+void SOC_setup() {
 
   // A déplacer dans le main ou à déclarer en variables globales
  const float *courant;
@@ -445,19 +445,19 @@ const float ECART_TYPE[] = {
                    pointeur_vect_intermediaire_1, pointeur_vect_intermediaire_2);
 
     vecteur_SOC[z] = *(pointeur_SOC);
-    printf("%f\n", *(pointeur_SOC));
+    //printf("%f\n", *(pointeur_SOC));
   }
   // Aurore : A regler plus tard
   //tempsFinal = micros();
  // bilanTempsLSTM = (tempsFinal - tempsInitial) / NbIteration;
 
   // affichage des résultats
-  printf("Sortie : ");
-  printf("%f\n", *(pointeur_SOC));
+  //printf("Sortie : ");
+  //printf("%f\n", *(pointeur_SOC));
   //printf("Bilan (ms) : ");
   //printf(bilanTempsLSTM / 1000);
-  printf("");
-  printf("SOC[0] = %f, SOC[%zu] = %f\n", vecteur_SOC[0], NbIteration-1, vecteur_SOC[NbIteration-1]);
+  //printf("");
+  //printf("SOC[0] = %f, SOC[%zu] = %f\n", vecteur_SOC[0], NbIteration-1, vecteur_SOC[NbIteration-1]);
   Free_donnees(courant, tension, temperature, SOH, SOC_simu);
   Ecriture_result(vecteur_SOC, NbIteration, "SOC_raspy_c");
 }
@@ -614,7 +614,7 @@ void MatriceFoisVecteur(int nbLignesMatrice, int tailleVecteur, const float *poi
 
 // Aurore : Rajout du main, sinon ça fonctionne pas
 
-int main() {
+/*int main() {
     setup();
     printf("Fin du programme\n");
-}
+}*/

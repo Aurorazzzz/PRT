@@ -8,7 +8,7 @@ SRC = script_principal.c \
 	  SOH_v1.c \
 	  RUL_Theo.c \
 	  RINT_Theo.c \
-	  SOC_Aurore.c \
+	  SOC_Reseau_charge_dech.c \
 	  SOP_Theo.c \
       Read_Write.c
 

@@ -3,7 +3,7 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
-void SOC_setup() {
+void setup() {
 
   // dimension du LSTM
   const int tailleEntree = 3;
