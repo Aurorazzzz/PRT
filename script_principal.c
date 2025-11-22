@@ -15,7 +15,7 @@ static double mesurer_temps(void (*f)(void), const char *nom)
     double duree_s = (double)(t1 - t0) / (double)CLOCKS_PER_SEC;
     double duree_us = duree_s * 1e6;
 
-    printf("Module %-20s : %10.6f s  (%10.0f µs)\n", nom, duree_s, duree_us);
+    printf("Module %-20s : %10.3f s  (%10.0f us)\n", nom, duree_s, duree_us);
 
     return duree_s;
 }
