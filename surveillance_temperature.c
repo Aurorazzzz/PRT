@@ -104,8 +104,8 @@ void TEMP_setup(void)
     free(vecteur_T2);
     free(vecteur_alerte);
 
-    printf("R1 = %.12f, C1 = %.12f\n", R1_modele_thermique, C1_modele_thermique);
-    printf("R2 = %.12f, C2 = %.12f\n", R2_modele_thermique, C2_modele_thermique);
+    //printf("R1 = %.12f, C1 = %.12f\n", R1_modele_thermique, C1_modele_thermique);
+    //printf("R2 = %.12f, C2 = %.12f\n", R2_modele_thermique, C2_modele_thermique);
 
 }
 /*

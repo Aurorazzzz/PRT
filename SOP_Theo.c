@@ -23,7 +23,7 @@ void estimation_SOP(float inputArg1,
     if (outputArg2) *outputArg2 = inputArg2;
 }
 
-void setup(void)
+void SOP_setup(void)
 {
     // === Entrées (buffers fournis par Charge_donnees) ===
     const float *courant    = NULL;
@@ -51,8 +51,8 @@ void setup(void)
 }
 
 
-int main() {
+/*int main() {
     setup();
     printf("Fin du programme\n");
     return 0;
-}
+}*/

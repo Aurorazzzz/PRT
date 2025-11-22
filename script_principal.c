@@ -29,7 +29,7 @@ int main(void)
     clock_t t_start = clock();
 
     double temps_total = 0.0;
-    printf("===== Mesure des temps d'execution des modules =====\n");
+    printf("========= Mesure des temps d'execution des modules =========\n");
 
     temps_total += mesurer_temps(TEMP_setup, "temperature");
     temps_total += mesurer_temps(TENSION_setup, "tension");
@@ -37,12 +37,15 @@ int main(void)
     temps_total += mesurer_temps(SOH_setup, "SOH");
     temps_total += mesurer_temps(RUL_setup, "RUL");
     temps_total += mesurer_temps(RINT_setup, "RINT");
+    temps_total += mesurer_temps(SOC_setup, "SOC");
+    temps_total += mesurer_temps(SOP_setup, "SOP");
+
     
 
     clock_t t_end = clock();
     double temps_global = (double)(t_end - t_start) / CLOCKS_PER_SEC;
 
-    printf("--------------------------test--------------------------\n");
+    printf("-------------------------------------------------------------\n");
     printf("Temps total (modules) : %.6f s\n", temps_total);
     printf("Temps global programme : %.6f s\n", temps_global);
 

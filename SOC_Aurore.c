@@ -3,7 +3,7 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
-void setup() {
+void SOC_setup() {
 
   // dimension du LSTM
   const int tailleEntree = 3;
@@ -105,14 +105,14 @@ const float ECART_TYPE[] = {2.8921 , 4.4502 , 5.0943 };
 
   // initialisation de la communication pour les résultats
   // Serial.begin(9600);
-  printf("");
-  printf("");
+  //printf("");
+  //printf("");
 
   // simulation
   // Aurore : Mesure du temps de simulation, a régler plus tard
   // tempsInitial = micros();
   for (z = 0; z <= NbIteration - 1; z++) {
-    printf("%f\n", *(pointeur_SOC));
+    //printf("%f\n", *(pointeur_SOC));
     estimationSOC(courant, tension, temperature, SOH, moins_eta_sur_Q, pointeur_Pk, pointeur_SOC,
                     dt, Qk, Rk, tailleEntree, tailleReseau, tailleSortie, pointeur_sortie_LSTM,
                    pointeur_xt, pointeur_ct, pointeur_ht,
@@ -124,18 +124,18 @@ const float ECART_TYPE[] = {2.8921 , 4.4502 , 5.0943 };
                    pointeur_vect_intermediaire_1, pointeur_vect_intermediaire_2);
 
   
-    printf("%f\n", *(pointeur_SOC));
+    //printf("%f\n", *(pointeur_SOC));
   }
   // Aurore : A regler plus tard
   //tempsFinal = micros();
  // bilanTempsLSTM = (tempsFinal - tempsInitial) / NbIteration;
 
   // affichage des résultats
-  printf("Sortie : ");
-  printf("%f\n", *(pointeur_SOC) *1000);
+  //printf("Sortie : ");
+  //printf("%f\n", *(pointeur_SOC) *1000);
   //printf("Bilan (ms) : ");
   //printf(bilanTempsLSTM / 1000);
-  printf("");
+  //printf("");
 }
 
 // Aurore : fonction loop inutile
@@ -283,7 +283,7 @@ void MatriceFoisVecteur(int nbLignesMatrice, int tailleVecteur, const float *poi
 
 // Aurore : Rajout du main, sinon ça fonctionne pas
 
-int main() {
+/*int main() {
     setup();
     printf("Fin du programme\n");
-}
+}*/

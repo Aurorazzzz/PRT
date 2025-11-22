@@ -8,6 +8,8 @@ SRC = script_principal.c \
 	  SOH_v1.c \
 	  RUL_Theo.c \
 	  RINT_Theo.c \
+	  SOC_Aurore.c \
+	  SOP_Theo.c \
       Read_Write.c
 
 # Chemin de sortie

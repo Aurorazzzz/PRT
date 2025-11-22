@@ -18,8 +18,8 @@ void TENSION_setup(void);
  void SOH_setup(void);
  void RUL_setup(void);
  void RINT_setup(void);
-// void SOC_setup(void);
-// void SOP_setup(void);
+ void SOC_setup(void);
+ void SOP_setup(void);
 // ============================================================================
 
 #endif // SCRIPT_PRINCIPAL_H
