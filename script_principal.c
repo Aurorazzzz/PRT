@@ -20,15 +20,6 @@ static double mesurer_temps(void (*f)(void), const char *nom)
     return duree_s;
 }
 
-static void dummy(void)
-{
-    // juste une petite boucle pour consommer un peu de temps
-    volatile double s = 0.0;
-    for (int i = 0; i < 10000000; ++i) {
-        s += i * 0.000001;
-    }
-}
-
 
 // ---------------------------------------------------------------------------
 // main : lance 1 à 1 les codes et mesure les temps
@@ -40,9 +31,13 @@ int main(void)
     double temps_total = 0.0;
     printf("===== Mesure des temps d'execution des modules =====\n");
 
-    temps_total += mesurer_temps(dummy, "surveillance");
-    temps_total += mesurer_temps(TEMP_setup, "surveillance_temperature");
-    temps_total += mesurer_temps(TENSION_setup, "surveillance_tension_Theo");
+    temps_total += mesurer_temps(TEMP_setup, "temperature");
+    temps_total += mesurer_temps(TENSION_setup, "tension");
+    temps_total += mesurer_temps(SOE_setup, "SOE");
+    temps_total += mesurer_temps(SOH_setup, "SOH");
+    temps_total += mesurer_temps(RUL_setup, "RUL");
+    temps_total += mesurer_temps(RINT_setup, "RINT");
+    
 
     clock_t t_end = clock();
     double temps_global = (double)(t_end - t_start) / CLOCKS_PER_SEC;

@@ -112,7 +112,7 @@ float interp1Drapide(const float *x_tab, const float *y_tab, int n, float x)
 // état = 0 --> charge
 // état = 1 --> décharge
 // ============================================================================
-void detection_charge_decharge(
+void detection_charge_decharge_rw(
     float courant,
     float tampon_charge_decharge[60],
     int *etat,

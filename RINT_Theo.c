@@ -31,7 +31,7 @@ void estimation_RINT_step(float tension,
     // --- Estimation brute R = -ΔU/ΔI et filtrage IIR d'ordre 1 (si pas d'inhibition) ---
     double R = *RINT;  // valeur de repli si inhibition
     if (!inhibition) {
-        printf("Inib");
+        //printf("Inib");
         if (delta_I != 0.0f) {
             R = -delta_U / delta_I;
         }
@@ -43,17 +43,17 @@ void estimation_RINT_step(float tension,
         float a2 = a_filtre_RINT[1];
         float b1 = b_filtre_RINT[0];
         float b2 = b_filtre_RINT[1];
-        printf("%.10f\n", R);
-        printf("%.10f\n", *RINTfiltrekm1);
-        printf("%.10f\n", *RINTkm1);
+        //printf("%.10f\n", R);
+        //printf("%.10f\n", *RINTfiltrekm1);
+        //printf("%.10f\n", *RINTkm1);
         *RINT = (-a2 * (*RINTfiltrekm1) + b1 * R + b2 * (*RINTkm1)) / a1;
-        printf("%.10f\n", *RINT);
+        //printf("%.10f\n", *RINT);
         *RINTfiltrekm1 = *RINT;
         *RINTkm1       = R;
 
     }
 
-    printf("%.10f\n", *RINT);
+    //printf("%.10f\n", *RINT);
     //--- Phase d'attente/compteur + calcul SOHR ---
     if (*compteur_RINT < 250000.0f) {
         *compteur_RINT += 1.0f;
@@ -80,7 +80,7 @@ void estimation_RINT_step(float tension,
     *courant_precedent  = courant;
 }
 
-void setup(void)
+void RINT_setup(void)
 {
     // === Entrées (buffers fournis par Charge_donnees) ===
     const float *courant     = NULL;
@@ -119,7 +119,7 @@ void setup(void)
         float U   = tension[i];
         float I   = -courant[i];
         float SOC = SOC_simu[i];
-        printf("%d\n", i);
+        //printf("%d\n", i);
         estimation_RINT_step(U, I, SOC,
                              a_filtre_RINT, b_filtre_RINT,
                              &RINT, &SOHR, &RINT_INIT,
@@ -138,9 +138,9 @@ void setup(void)
     Ecriture_result(vecteur_RINT, NbIteration, "RINT_ordi");
 }
 
-int main(void)
+/*int main(void)
 {
     setup();
     printf("Fin du programme\n");
     return 0;
-}
+}*/

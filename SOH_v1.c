@@ -2,7 +2,7 @@
 #include "SOH_v1.h"
 
 
-void calcul_vecteur_SOH(){
+void SOH_setup(){
     // Initialisation des entrées
     const float *courant;
     const float *tension;
@@ -57,8 +57,8 @@ void calcul_vecteur_SOH(){
     float *pointeur_SOH = &SOH;
 
     Charge_donnees(&courant, &tension, &temperature, &SOH_simu, &SOC);
-    printf("premier courant : ");
-    printf("%f\n", courant[0]);
+    //printf("premier courant : ");
+    //printf("%f\n", courant[0]);
 
     for (int z = 0; z <= NbIteration - 1; z++) {
         
@@ -68,7 +68,7 @@ void calcul_vecteur_SOH(){
 
         //vecteur_SOH[z] = *(pointeur_SOH);
         vecteur_SOH[z] = *(pointeur_SOH);
-        printf("%f\n", *(pointeur_SOH));
+        //printf("%f\n", *(pointeur_SOH));
     }
 
     Free_donnees(courant, tension, temperature, SOH_simu, SOC);
@@ -98,7 +98,7 @@ void calcul_SOH(float *integrale_courant, const float courant, bool changement_e
             if ((SOH_pre_filtre>1) || SOH_pre_filtre<0){
                 //printf("%f\f", SOH_pre_filtre);
                 SOH_pre_filtre = *SOH;
-                 printf("Resultat aberrant \n");
+                 //printf("Resultat aberrant \n");
                  
             }
 
@@ -162,7 +162,7 @@ float moyenne(float *tableau, const int taille) {
     return somme / (float)taille;
 }
 
-int main() {
-    calcul_vecteur_SOH();
+/*int main() {
+    SOH_setup();
     printf("Fin du programme\n");
-}
+}*/

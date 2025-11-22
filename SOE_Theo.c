@@ -70,7 +70,7 @@ float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
     return ocv_moyenne * integrale_courant_pred;
 }
 
-void setup(void)
+void SOE_setup(void)
 {
     // === Entrées (buffers fournis par Charge_donnees) ===
     const float *courant    = NULL;
@@ -123,8 +123,9 @@ void setup(void)
 
 }
 
-int main() {
+/*int main() {
     setup();
     printf("Fin du programme !\n");
     return 0;
-}//protect 
+}*/
+    //protect 

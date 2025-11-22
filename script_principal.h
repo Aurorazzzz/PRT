@@ -14,10 +14,10 @@ void TENSION_setup(void);
 // ============================================================================
 // Si plus tard vous ajoutez d'autres modules, vous pourrez les déclarer ici.
 // Exemple :
-// void SOE_setup(void);
-// void SOH_setup(void);
-// void RUL_setup(void);
-// void RINT_setup(void);
+ void SOE_setup(void);
+ void SOH_setup(void);
+ void RUL_setup(void);
+ void RINT_setup(void);
 // void SOC_setup(void);
 // void SOP_setup(void);
 // ============================================================================

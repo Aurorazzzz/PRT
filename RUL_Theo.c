@@ -24,24 +24,6 @@ static inline void mat2_transpose(const float A[4], float AT[4]) {
     AT[2] = A[1]; AT[3] = A[3];
 }
 
-/* ================== Interpolation rapide robuste ================== */
-float interp1rapide(const float *X, const float *Y, int n, float x) {
-    if (n <= 0) return 0.0f;
-    if (n == 1) return Y[0];
-    if (x <= X[0])      return Y[0];
-    if (x >= X[n - 1])  return Y[n - 1];
-
-    int i = 0;
-    // Recherche de i 
-    while (i < n - 1 && !(x >= X[i] && x <= X[i + 1])) ++i;
-    if (i >= n - 1) return Y[n - 1];
-
-    float dx = X[i + 1] - X[i];
-    if (dx == 0.0f) return Y[i];
-    float t = (x - X[i]) / dx;
-    return Y[i] + t * (Y[i + 1] - Y[i]);
-}
-
 /* ================== Estimation RUL (Kalman 2x2) ================== */
 void estimation_RUL(float SOH,
                     float delta_SOC,
@@ -62,7 +44,7 @@ void estimation_RUL(float SOH,
 {
     /* 1) Accumulateur de demi-cycles (selon ton MATLAB) */
     if (dt > 0.0f) *integrale_SOC += f_absf(delta_SOC) / dt;
-    printf("%f\n", *integrale_SOC);
+    //printf("%f\n", *integrale_SOC);
 
     /* 2) Déclenchement quand floor(integrale_SOC/2) augmente */
     int declenche = 0;
@@ -91,7 +73,7 @@ void estimation_RUL(float SOH,
 
         /* Mesure z = RUL_modele(SOH) via loi RUL(SOH) */
         // On trouve RUL_est
-        float z_mes = interp1rapide(X_Loi_RUL, Y_Loi_RUL, n_loi, SOH);
+        float z_mes = interp1Drapide(X_Loi_RUL, Y_Loi_RUL, n_loi, SOH);
 
         /* Résidu */
         //float Hx = Hk_RUL[0]*x_pred[0] + Hk_RUL[1]*x_pred[1];
@@ -133,13 +115,13 @@ void estimation_RUL(float SOH,
                  ? (*RUL_est) / (*vitesse_degradation)
                  : 0.0f;
     
-    printf("%f\n", *RUL_est);
-    printf("%f\n", *RUL_corrige);
+    //printf("%f\n", *RUL_est);
+    //printf("%f\n", *RUL_corrige);
 
 }
 
 /* ================== Setup d'exemple ================== */
-void setup(void)
+void RUL_setup(void)
 {
     /* Entrées (buffers fournis par Read_Write.h) */
     const float *courant = NULL, *tension = NULL, *temperature = NULL;
@@ -199,9 +181,9 @@ void setup(void)
 }
 
 
-int main(void) {
+/*int main(void) {
     setup();
     puts("Fin du programme");
     return 0;
-}
+}*/
 

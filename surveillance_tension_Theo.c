@@ -104,7 +104,7 @@ void TENSION_setup(void)
         float courant_simulation = -courant[i];
 
         // === Détection de la phase charge/décharge ===
-        detection_charge_decharge(
+        detection_charge_decharge_rw(
             courant_simulation,
             tampon_charge_decharge,
             &etat,
