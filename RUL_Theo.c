@@ -150,7 +150,7 @@ void RUL_setup(void)
     const int n_loi = 9;
 
     /* États internes */
-    float RUL_est = interp1rapide(X_Loi_RUL, Y_Loi_RUL, n_loi, 1.0);
+    float RUL_est = interp1Drapide(X_Loi_RUL, Y_Loi_RUL, n_loi, 1.0);
     float v_deg   = 1.0f;
     float integSOC = 0.0f;
     int   cycles   = 0;

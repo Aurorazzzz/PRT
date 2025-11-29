@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 /* Interpolation linéaire 1D : équivalent de interp1rapide(X,Y,x) */
-float interp1rapide(const float *X, const float *Y, int n, float x);
+//float interp1rapide(const float *X, const float *Y, int n, float x);
 
 /* Estimation RUL (mise à jour in-place via pointeurs) */
 void estimation_RUL(float SOH,

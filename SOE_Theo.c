@@ -13,7 +13,7 @@
 // Sortie : valeur interpolée
 // ============================================================================
 
-float interp1rapide(const float *x, const float *y, int n, float x_req)
+/*float interp1rapide(const float *x, const float *y, int n, float x_req)
 {
     int indice = -1; // empty
 
@@ -38,7 +38,7 @@ float interp1rapide(const float *x, const float *y, int n, float x_req)
 
     // sortie = (1-coord)*y(indice) + coord*y(indice+1)
     return (1.0f - coord) * y[indice] + coord * y[indice + 1];
-}
+}*/
 
 // ============================================================================
 // Fonction principale : estimation du SOE
@@ -63,7 +63,7 @@ float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
     float integrale_courant_pred = (1.0f / moins_eta_sur_Q) * SOH * SOC;
 
     // “tension moyenne intégrée” interpolée depuis la table
-    float ocv_moyenne = interp1rapide(X_OCV, LOI_INTEG_OCV_DECHARGE, n, SOC);
+    float ocv_moyenne = interp1Drapide(X_OCV, LOI_INTEG_OCV_DECHARGE, n, SOC);
     //float ocv_moyenne = 1.0f; // Pour tester sans la table
 
     // SOE (énergie) — unités cohérentes avec la table

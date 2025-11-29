@@ -1,22 +1,23 @@
 CC = gcc
 CFLAGS = -O2 -Wall
 
-SRC = script_principal.c \
-      surveillance_temperature.c \
-      surveillance_tension_Theo.c \
-	  SOE_Theo.c \
-	  SOH_v1.c \
-	  RUL_Theo.c \
-	  RINT_Theo.c \
-	  SOC_Reseau_charge_dech.c \
-	  SOP_Theo.c \
-      Read_Write.c
+SRC = script_principal_step.c \
+      sur_temperature.c \
+      sur_tension.c \
+	  SOE.c \
+	  SOH.c \
+	  RUL.c \
+	  RINT.c \
+	  Read_Write.c \
+	  #SOC_Reseau_charge_dech.c \
+	  #SOP_Theo.c 
+      
 
 # Chemin de sortie
 OUTDIR = output
 
 # Nom de l'exécutable final dans output/
-TARGET = $(OUTDIR)/script_principal.exe
+TARGET = $(OUTDIR)/script_principal_step.exe
 
 all: $(TARGET)
 
