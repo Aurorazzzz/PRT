@@ -11,9 +11,7 @@
 #include "RINT.h"
 #include "script_principal_step.h"
 
-// ---------------------------------------------------------------------------
-// Petit helper pour mesurer le temps d'un bloc de code
-// ---------------------------------------------------------------------------
+
 static double duree_en_seconde(clock_t t0, clock_t t1)
 {
     return (double)(t1 - t0) / (double)CLOCKS_PER_SEC;
@@ -142,7 +140,7 @@ int main(void)
 
             int   alerte = 0;
             int   etat   = 1;          // 1 = décharge, 0 = charge
-            float I_sim  = -I_mes;     // même convention que votre ancien setup
+            float I_sim  = -I_mes;    
 
             float U_model = TENSION_step(&tens_ctx,
                                          I_sim,
@@ -207,7 +205,7 @@ int main(void)
             clock_t t0 = clock();
 
             float SOHR_dummy;
-            float I_effectif = -I_mes;   // même convention que dans RINT_Theo
+            float I_effectif = -I_mes;  
 
             float Rint = RINT_step(&rint_ctx,
                                    U_mes,
@@ -264,14 +262,14 @@ int main(void)
     // =====================================================================
     // 7) Écriture des résultats
     // =====================================================================
-    Ecriture_result(vect_T2_temp,        NbIteration, "TEMPERATURE_MODEL_PC_result");
-    Ecriture_result(vect_alerte_temp,    NbIteration, "ALERTE_TEMPERATURE_PC_result");
-    Ecriture_result(vect_U_tension,      NbIteration, "TENSION_MODEL_raspi_result2");
-    Ecriture_result(vect_alerte_tension, NbIteration, "ALERTE_TENSION_raspi_result");
-    Ecriture_result(vect_SOE,            NbIteration, "SOE_raspi_result");
-    Ecriture_result(vect_SOH,            NbIteration, "SOH_ordi");
-    Ecriture_result(vect_RUL,            NbIteration, "RUL_raspi_result");
-    Ecriture_result(vect_RINT,           NbIteration, "RINT_ordi");
+    Ecriture_result(vect_T2_temp,        NbIteration, "TEMPERATURE_vscode");
+    Ecriture_result(vect_alerte_temp,    NbIteration, "ALERTE_TEMPERATURE_vscode");
+    Ecriture_result(vect_U_tension,      NbIteration, "TENSION_vscode");
+    Ecriture_result(vect_alerte_tension, NbIteration, "ALERTE_TENSION_vscode");
+    Ecriture_result(vect_SOE,            NbIteration, "SOE_vscode");
+    Ecriture_result(vect_SOH,            NbIteration, "SOH_vscode");
+    Ecriture_result(vect_RUL,            NbIteration, "RUL_vscode");
+    Ecriture_result(vect_RINT,           NbIteration, "RINT_vscode");
     Ecriture_result(vect_temps_cycle,    NbIteration, "TEMPS_CYCLE_CPU");
 
     // =====================================================================
