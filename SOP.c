@@ -3,6 +3,7 @@
 #include <math.h>
 #include "SOP.h"
 #include "Read_Write.h"
+#include <stdbool.h>
 
 /* ========================================================================== */
 /*  Interpolation rapide + dérivée (interp1rapide_der.m)                      */
@@ -55,80 +56,137 @@ static void interp1rapide_der(const float *x,
     *sortie = (1.0f - coord) * y[indice] + coord * y[indice + 1];
 }
 
-/* ========================================================================== */
-/*  Modèle SOC comptage coulombmétrique (modele_SOC_CC.m)                    */
-/* ========================================================================== */
-/* SOC_predit(i+1) = SOC_predit(i) - moins_eta_sur_Q*dt*I(i)/SOH             */
-/* ========================================================================== */
-static void modele_SOC_CC(float moins_eta_sur_Q,
-                          float dt,
-                          int   horizon,
-                          float SOC_init,
-                          const float *courant_candidat_vecteur,
-                          float SOH,
-                          float *SOC_predit){
-    SOC_predit[0] = SOC_init;
+void simuler_horizon_batterie(float moins_eta_sur_Q,
+                              float dt,
+                              int   horizon,
+                              float SOC_init,
+                              float SOH,
+                              const float parametre_therm[4],
+                              float T1_init,
+                              float T2_init,
+                              float TAMB,
+                              float Ir_init,
+                              int   etat,
+                              const float *X_OCV_dep,
+                              const float *Y_OCV_dep_charge,
+                              const float *Y_OCV_dep_decharge,
+                              int   n_OCV,
+                              float R1,
+                              float C1,
+                              float R0,
+                              float I_candidat,
+                              float SOC_minmax[2], // [min, max]
+                              float T1_minmax[2],
+                              float T2_minmax[2],
+                              float U_minmax[2],
+                              float *Ir_final)
+{
+    // États instantanés
+    float SOC = SOC_init;
+    float T1  = T1_init;
+    float T2  = T2_init;
+    float Ir  = Ir_init;
 
-    for (int i = 0; i < horizon - 1; ++i)
+    // Init min/max avec l'état initial
+    SOC_minmax[0] = SOC; SOC_minmax[1] = SOC;
+    T1_minmax[0]  = T1;  T1_minmax[1]  = T1;
+    T2_minmax[0]  = T2;  T2_minmax[1]  = T2;
+
+    // Il faut aussi une tension initiale : on peut la calculer une fois
+    float U0 = modele_tension_1RC_step(I_candidat, SOC, &Ir,
+                                       etat,
+                                       X_OCV_dep,
+                                       Y_OCV_dep_charge,
+                                       Y_OCV_dep_decharge,
+                                       n_OCV,
+                                       dt, R1, C1, R0);
+    U_minmax[0] = U0;
+    U_minmax[1] = U0;
+
+    // Boucle sur l'horizon (on a déjà traité le pas 0 avec U0, à vous de choisir si vous incluez ou pas k=0 dans horizon)
+    for (int k = 1; k < horizon; ++k)
     {
-        SOC_predit[i + 1] =
-            SOC_predit[i] - moins_eta_sur_Q * dt * courant_candidat_vecteur[i] / SOH;
+        // 1) Avancer le SOC
+        SOC = modele_SOC_CC_step(moins_eta_sur_Q, dt, SOC, I_candidat, SOH);
+
+        // 2) Avancer le thermique
+        modele_thermique_foster_ordre_2_step(parametre_therm, I_candidat, dt, TAMB,
+                                             &T1, &T2);
+
+        // 3) Avancer la tension (Ir mis à jour dedans)
+        float U = modele_tension_1RC_step(I_candidat, SOC, &Ir,
+                                          etat,
+                                          X_OCV_dep,
+                                          Y_OCV_dep_charge,
+                                          Y_OCV_dep_decharge,
+                                          n_OCV,
+                                          dt, R1, C1, R0);
+
+        // 4) Mettre à jour les min/max
+
+        if (SOC < SOC_minmax[0]) SOC_minmax[0] = SOC;
+        if (SOC > SOC_minmax[1]) SOC_minmax[1] = SOC;
+
+        if (T1 < T1_minmax[0]) T1_minmax[0] = T1;
+        if (T1 > T1_minmax[1]) T1_minmax[1] = T1;
+
+        if (T2 < T2_minmax[0]) T2_minmax[0] = T2;
+        if (T2 > T2_minmax[1]) T2_minmax[1] = T2;
+
+        if (U < U_minmax[0]) U_minmax[0] = U;
+        if (U > U_minmax[1]) U_minmax[1] = U;
     }
+
+    if (Ir_final) *Ir_final = Ir;
 }
 
-/* ========================================================================== */
-/*  Modèle thermique Foster d’ordre 2 (modele_thermique_foster_ordre_2.m)    */
-/* ========================================================================== */
-static void modele_thermique_foster_ordre_2(const float parametre[4],
-                                            float       T1_init,
-                                            float       T2_init,
-                                            const float *I,
-                                            float       dt,
-                                            float       TAMB,
-                                            int         horizon,
-                                            float      *T1,
-                                            float      *T2){
+static float modele_SOC_CC_step(float moins_eta_sur_Q,
+                                float dt,
+                                float SOC_prev,
+                                float I,
+                                float SOH)
+{
+    return SOC_prev - moins_eta_sur_Q * dt * I / SOH;
+}
+
+static void modele_thermique_foster_ordre_2_step(const float parametre[4],
+                                                 float       I,
+                                                 float       dt,
+                                                 float       TAMB,
+                                                 float      *T1,   // in/out
+                                                 float      *T2)   // in/out
+{
     float R1 = parametre[0];
     float C1 = parametre[1];
     float R2 = parametre[2];
     float C2 = parametre[3];
 
-    T1[0] = T1_init;
-    T2[0] = T2_init;
+    float T1_prev = *T1;
+    float T2_prev = *T2;
 
-    for (int i = 0; i < horizon - 1; ++i)
-    {
-        T1[i + 1] = T1[i]
-                  + dt * (R1 * I[i] * I[i] + TAMB - T1[i]) / (R1 * C1);
-        T2[i + 1] = T2[i]
-                  + dt * (T1[i] - T2[i]) / (R2 * C2);
-    }
+    float T1_inst = T1_prev + dt * (R1 * I * I + TAMB - T1_prev) / (R1 * C1);
+    float T2_inst = T2_prev + dt * (T1_prev - T2_prev) / (R2 * C2);
+
+    *T1 = T1_inst;
+    *T2 = T2_inst;
 }
 
-/* ========================================================================== */
-/*  Modèle tension 1RC (modele_tension_1RC.m)                                */
-/* ========================================================================== */
-/* U_pred(i) = OCV(SOC(i)) - R1*Ir - R0*I(i)                                 */
-/* avec Ir(k+1) = (-dt/(R1*C1)+1)*Ir(k) + (dt/(R1*C1))*I(k)                   */
-/* ========================================================================== */
-static void modele_tension_1RC(const float *courant,
-                               const float *SOC,
-                               float        Ir_init,
-                               int          etat, /* 1 = décharge, 0 = charge */
-                               const float *X_OCV_dep,
-                               const float *Y_OCV_dep_charge,
-                               const float *Y_OCV_dep_decharge,
-                               int          n_OCV,
-                               float        dt,
-                               float        R1,
-                               float        C1,
-                               float        R0,
-                               int          horizon,
-                               float       *U_pred,
-                               float       *Ir_final){
-    float Ir = Ir_init;
+static float modele_tension_1RC_step(float        I,
+                                     float        SOC,
+                                     float       *Ir,   // in/out
+                                     int          etat, // 1 = décharge, 0 = charge
+                                     const float *X_OCV_dep,
+                                     const float *Y_OCV_dep_charge,
+                                     const float *Y_OCV_dep_decharge,
+                                     int          n_OCV,
+                                     float        dt,
+                                     float        R1,
+                                     float        C1,
+                                     float        R0)
+{
     float denom = R1 * C1;
-    float alpha = 0.0f, beta = 0.0f;
+    float alpha = 1.0f;
+    float beta  = 0.0f;
 
     if (denom != 0.0f)
     {
@@ -136,23 +194,151 @@ static void modele_tension_1RC(const float *courant,
         beta  =  dt / denom;
     }
 
-    for (int i = 0; i < horizon; ++i)
-    {
-        /* Mise à jour du courant dans le RC */
-        Ir = alpha * Ir + beta * courant[i];
+    // Mise à jour Ir
+    *Ir = alpha * (*Ir) + beta * I;
 
-        /* Choix de la table OCV en charge / décharge */
-        const float *Y_tab = etat ? Y_OCV_dep_decharge : Y_OCV_dep_charge;
+    // Choix table OCV
+    const float *Y_tab = etat ? Y_OCV_dep_decharge : Y_OCV_dep_charge;
 
-        /* Interpolation OCV(SOC) */
-        float OCV, der_dummy;
-        interp1rapide_der(X_OCV_dep, Y_tab, n_OCV, SOC[i], &OCV, &der_dummy);
+    // Interpolation OCV(SOC)
+    float OCV, der_dummy;
+    interp1rapide_der(X_OCV_dep, Y_tab, n_OCV, SOC, &OCV, &der_dummy);
 
-        U_pred[i] = OCV - R1 * Ir - R0 * courant[i];
-    }
+    // Tension
+    float U = OCV - R1 * (*Ir) - R0 * I;
 
-    if (Ir_final) *Ir_final = Ir;
+    return U;
 }
+/* ========================================================================== */
+/*  Modèle SOC comptage coulombmétrique (modele_SOC_CC.m)                    */
+/* ========================================================================== */
+/* SOC_predit(i+1) = SOC_predit(i) - moins_eta_sur_Q*dt*I(i)/SOH             */
+/* ========================================================================== */
+// static void modele_SOC_CC(float moins_eta_sur_Q,
+//                           float dt,
+//                           int   horizon,
+//                           float SOC_init,
+//                           const float courant_candidat_racine,
+//                           float SOH,
+//                           float *SOC_predit, /*Debut paramètres tension*/
+//                         ){
+//     SOC_predit[0] = SOC_init;
+//     SOC_predit[1] = SOC_init;
+//     float SOC_inst;
+//     float SOC_inst_prev = SOC_init;
+
+//     for (int i = 0; i < horizon - 1; ++i)
+//     {
+//         SOC_inst =
+//             SOC_inst_prev - moins_eta_sur_Q * dt * courant_candidat_racine / SOH;
+
+//         if (SOC_inst < SOC_predit[0]){
+//             SOC_predit[0] = SOC_init;
+//         } 
+//         if (SOC_inst > SOC_predit[1]){
+//             SOC_predit[1] = SOC_init;
+//         } 
+
+
+//     }
+// }
+
+// /* ========================================================================== */
+// /*  Modèle thermique Foster d’ordre 2 (modele_thermique_foster_ordre_2.m)    */
+// /* ========================================================================== */
+// static void modele_thermique_foster_ordre_2(const float parametre[4],
+//                                             float       T1_init,
+//                                             float       T2_init,
+//                                             const float I,
+//                                             float       dt,
+//                                             float       TAMB,
+//                                             int         horizon,
+//                                             float      *T1,
+//                                             float      *T2){
+//     float R1 = parametre[0];
+//     float C1 = parametre[1];
+//     float R2 = parametre[2];
+//     float C2 = parametre[3];
+
+//     T1[0] = T1_init;
+//     T2[0] = T2_init;
+//     T1[1] = T1_init;
+//     T2[1] = T2_init;
+//     float T1_inst;
+//     float T2_inst;
+//     float T1_prev;
+//     float T2_prev;
+
+//     for (int i = 0; i < horizon - 1; ++i)
+//     {
+//         T1_inst = T1_prev
+//                   + dt * (R1 * I * I + TAMB - T1_prev) / (R1 * C1);
+//         T2_inst = T2_prev
+//                   + dt * (T1_prev - T2_prev) / (R2 * C2);
+        
+//         if (T1_inst < T1[0]){
+//             T1[0] = T1_inst;
+//         } 
+//         if (T1_inst > T1[1]){
+//             T1[1] = T1_inst;
+//         } 
+//         if (T2_inst < T2[0]){
+//             T2[0] = T2_inst;
+//         } 
+//         if (T2_inst > T2[1]){
+//             T2[1] = T2_inst;
+//         } 
+//     }
+// }
+
+// /* ========================================================================== */
+// /*  Modèle tension 1RC (modele_tension_1RC.m)                                */
+// /* ========================================================================== */
+// /* U_pred(i) = OCV(SOC(i)) - R1*Ir - R0*I(i)                                 */
+// /* avec Ir(k+1) = (-dt/(R1*C1)+1)*Ir(k) + (dt/(R1*C1))*I(k)                   */
+// /* ========================================================================== */
+// static void modele_tension_1RC(const float courant,
+//                                const float *SOC,
+//                                float        Ir_init,
+//                                int          etat, /* 1 = décharge, 0 = charge */
+//                                const float *X_OCV_dep,
+//                                const float *Y_OCV_dep_charge,
+//                                const float *Y_OCV_dep_decharge,
+//                                int          n_OCV,
+//                                float        dt,
+//                                float        R1,
+//                                float        C1,
+//                                float        R0,
+//                                int          horizon,
+//                                float       *U_pred,
+//                                float       *Ir_final){
+//     float Ir = Ir_init;
+//     float denom = R1 * C1;
+//     float alpha = 0.0f, beta = 0.0f;
+
+//     if (denom != 0.0f)
+//     {
+//         alpha = -dt / denom + 1.0f;
+//         beta  =  dt / denom;
+//     }
+
+//     for (int i = 0; i < horizon; ++i)
+//     {
+//         /* Mise à jour du courant dans le RC */
+//         Ir = alpha * Ir + beta * courant[i];
+
+//         /* Choix de la table OCV en charge / décharge */
+//         const float *Y_tab = etat ? Y_OCV_dep_decharge : Y_OCV_dep_charge;
+
+//         /* Interpolation OCV(SOC) */
+//         float OCV, der_dummy;
+//         interp1rapide_der(X_OCV_dep, Y_tab, n_OCV, SOC[i], &OCV, &der_dummy);
+
+//         U_pred[i] = OCV - R1 * Ir - R0 * courant[i];
+//     }
+
+//     if (Ir_final) *Ir_final = Ir;
+// }
 
 /* ========================================================================== */
 /*  Recherche de racine pour le courant (recherche_racine_SOP_Pegase_1RC.m)  */
@@ -200,19 +386,27 @@ static float recherche_racine_SOP_Pegase_1RC(
     float R1,
     float C1,
     float R0,
-    float courant_requete        /* courant(i) dans le script */
+    float courant_requete, 
+    float *residus        /* courant(i) dans le script */
 ){
     /* --- Allocation locale pour les prédictions --- */
-    float courant_candidat_vecteur[64]; /* horizon <= 64: marge */
-    float SOC_predit[64];
-    float T1_vec[64], T2_vec[64];
-    float U_pred[64];
+    float courant_candidat_racine;
+    float SOC_minmax_A[2];
+    float T1_minmax_A[2], T2_minmax_A[2];
+    float U_minmax_A[2];
 
-    if (horizon > 64) {
-        /* sécurité : à adapter si vous changez l’horizon */
-        fprintf(stderr, "Horizon trop grand dans recherche_racine_SOP_Pegase_1RC\n");
-        return consigne_courant;
-    }
+    float SOC_minmax_B[2];
+    float T1_minmax_B[2], T2_minmax_B[2];
+    float U_minmax_B[2];
+    float courant_final;
+
+    bool coteA = false;
+    bool coteB = false;
+    // if (horizon > 64) {
+    //     /* sécurité : à adapter si vous changez l’horizon */
+    //     fprintf(stderr, "Horizon trop grand dans recherche_racine_SOP_Pegase_1RC\n");
+    //     return consigne_courant;
+    // }
 
     /* ---------------- Détermination des bornes A/B ---------------- */
     float borne_A, borne_B;
@@ -226,49 +420,74 @@ static float recherche_racine_SOP_Pegase_1RC(
 
     /* ---------------- Évaluation initiale de la borne A ---------------- */
     for (int i = 0; i < horizon; ++i)
-        courant_candidat_vecteur[i] = borne_A;
+        courant_candidat_racine = borne_A;
 
-    modele_SOC_CC(moins_eta_sur_Q, dt, horizon,
-                  SOC_actuel, courant_candidat_vecteur, SOH_actuel,
-                  SOC_predit);
+    // modele_SOC_CC(moins_eta_sur_Q, dt, horizon,
+    //               SOC_actuel, courant_candidat_racine, SOH_actuel,
+    //               SOC_predit);
 
-    modele_thermique_foster_ordre_2(coefficients_modele_temperature,
-                                    T1_init, temperature_actuelle,
-                                    courant_candidat_vecteur, dt, TAMB,
-                                    horizon, T1_vec, T2_vec);
+    // modele_thermique_foster_ordre_2(coefficients_modele_temperature,
+    //                                 T1_init, temperature_actuelle,
+    //                                 courant_candidat_racine, dt, TAMB,
+    //                                 horizon, T1_vec, T2_vec);
 
-    modele_tension_1RC(courant_candidat_vecteur, SOC_predit,
-                       Ir_init, etat,
-                       X_OCV_dep, Y_OCV_dep_charge, Y_OCV_dep_decharge,
-                       n_OCV,
-                       dt, R1, C1, R0, horizon,
-                       U_pred, NULL);
+    // modele_tension_1RC(courant_candidat_racine, SOC_predit,
+    //                    Ir_init, etat,
+    //                    X_OCV_dep, Y_OCV_dep_charge, Y_OCV_dep_decharge,
+    //                    n_OCV,
+    //                    dt, R1, C1, R0, horizon,
+    //                    U_pred, NULL);
 
+    simuler_horizon_batterie(moins_eta_sur_Q,
+                              dt,
+                              horizon,
+                              SOC_actuel,
+                              SOH_actuel,
+                              coefficients_modele_temperature,
+                              T1_init,
+                              temperature_actuelle,
+                              TAMB,
+                              Ir_init,
+                              etat,
+                              X_OCV_dep,
+                              Y_OCV_dep_charge,
+                              Y_OCV_dep_decharge,
+                              n_OCV,
+                              R1,
+                              C1,
+                              R0,
+                              courant_candidat_racine,
+                              SOC_minmax_A, // [min, max]
+                              T1_minmax_A,
+                              T2_minmax_A,
+                              U_minmax_A,
+                              NULL);
+    
     float residus_borne_A[3];
 
     if (consigne_courant > 0.0f) {
         /* charge : contraintes (SOC_min, T_max, U_min) */
-        float SOC_min_predit = SOC_predit[0];
-        float U_min_predit   = U_pred[0];
-        float T2_max         = T2_vec[0];
-        for (int i = 1; i < horizon; ++i) {
-            if (SOC_predit[i] < SOC_min_predit) SOC_min_predit = SOC_predit[i];
-            if (U_pred[i]     < U_min_predit)   U_min_predit   = U_pred[i];
-            if (T2_vec[i]     > T2_max)         T2_max         = T2_vec[i];
-        }
+        float SOC_min_predit = SOC_minmax_A[0];
+        float U_min_predit   = U_minmax_A[0];
+        float T2_max         = T2_minmax_A[1];
+        // for (int i = 1; i < horizon; ++i) {
+        //     if (SOC_predit[i] < SOC_min_predit) SOC_min_predit = SOC_predit[i];
+        //     if (U_pred[i]     < U_min_predit)   U_min_predit   = U_pred[i];
+        //     if (T2_vec[i]     > T2_max)         T2_max         = T2_vec[i];
+        // }
         residus_borne_A[0] = SOC_min - SOC_min_predit;
         residus_borne_A[1] = T2_max - T_max;
         residus_borne_A[2] = U_min - U_min_predit;
     } else {
         /* décharge : contraintes (SOC_max, T_max, U_max) */
-        float SOC_max_predit = SOC_predit[0];
-        float U_max_predit   = U_pred[0];
-        float T2_max         = T2_vec[0];
-        for (int i = 1; i < horizon; ++i) {
-            if (SOC_predit[i] > SOC_max_predit) SOC_max_predit = SOC_predit[i];
-            if (U_pred[i]     > U_max_predit)   U_max_predit   = U_pred[i];
-            if (T2_vec[i]     > T2_max)         T2_max         = T2_vec[i];
-        }
+        float SOC_max_predit = SOC_minmax_A[1];
+        float U_max_predit   = U_minmax_A[1];
+        float T2_max         = T2_minmax_A[0];
+        // for (int i = 1; i < horizon; ++i) {
+        //     if (SOC_predit[i] > SOC_max_predit) SOC_max_predit = SOC_predit[i];
+        //     if (U_pred[i]     > U_max_predit)   U_max_predit   = U_pred[i];
+        //     if (T2_vec[i]     > T2_max)         T2_max         = T2_vec[i];
+        // }
         residus_borne_A[0] = SOC_max_predit - SOC_max;
         residus_borne_A[1] = T2_max - T_max;
         residus_borne_A[2] = U_max_predit - U_max;
@@ -282,25 +501,224 @@ static float recherche_racine_SOP_Pegase_1RC(
         return 0.0f;
     }
 
-    /* --- À partir d’ici, il faut traduire EXACTEMENT le reste du script : --- */
-    /*
-       - Évaluer la borne_B comme dans le script
-       - Construire residus_borne_B
-       - Si all(residus_borne_B<0) => courant_final = borne_B
-       - Sinon boucle for i=1:12 :
-            * calcul de la pente = (residus_B - residus_A)/(borne_B - borne_A)
-            * calcul de pas_vecteur = -residus_borne_A./pente
-            * gestion des cas où les deux résidus sont <0
-            * calcul de borne_C (borne_A + pas, saturée entre I_min/I_max)
-            * évaluer SOC/T/U à borne_C → residus_borne_C
-            * mettre à jour borne_A / borne_B selon le signe des résidus
-       - retourner courant_final
-    */
 
-    /* Pour l’instant on retourne simplement la consigne d’origine
-       (ce qui vous permet de compiler et de tester le reste du pipeline).
-       À remplacer par l’algorithme complet. */
-    return consigne_courant;
+    /* ---------------- Évaluation initiale de la borne B ---------------- */
+
+courant_candidat_racine = borne_B;
+
+simuler_horizon_batterie(moins_eta_sur_Q,
+                         dt,
+                         horizon,
+                         SOC_actuel,
+                         SOH_actuel,
+                         coefficients_modele_temperature,
+                         T1_init,
+                         temperature_actuelle,
+                         TAMB,
+                         Ir_init,
+                         etat,
+                         X_OCV_dep,
+                         Y_OCV_dep_charge,
+                         Y_OCV_dep_decharge,
+                         n_OCV,
+                         R1,
+                         C1,
+                         R0,
+                         courant_candidat_racine,
+                         SOC_minmax_B,   /* [min,max] */
+                         T1_minmax_B,
+                         T2_minmax_B,
+                         U_minmax_B,
+                         NULL);
+
+float residus_borne_B[3];
+
+if (consigne_courant > 0.0f) {
+    /* charge : contraintes (SOC_min, T_max, U_min) */
+    float SOC_min_predit = SOC_minmax_B[0];
+    float U_min_predit   = U_minmax_B[0];
+    float T2_max         = T2_minmax_B[1];
+
+    residus_borne_B[0] = SOC_min - SOC_min_predit;
+    residus_borne_B[1] = T2_max - T_max;
+    residus_borne_B[2] = U_min - U_min_predit;
+}
+else {
+    /* décharge : contraintes (SOC_max, T_max, U_max) */
+    float SOC_max_predit = SOC_minmax_B[1];
+    float U_max_predit   = U_minmax_B[1];
+    float T2_max         = T2_minmax_B[0];
+
+    residus_borne_B[0] = SOC_max_predit - SOC_max;
+    residus_borne_B[1] = T2_max - T_max;
+    residus_borne_B[2] = U_max_predit - U_max;
+}
+
+/* Si le courant max respecte toutes les contraintes → pas de limitation */
+if (residus_borne_B[0] < 0.0f &&
+    residus_borne_B[1] < 0.0f &&
+    residus_borne_B[2] < 0.0f)
+{
+    return borne_B;
+}
+
+for (int iter = 0; iter < 12; ++iter)
+{
+    float borne_C;
+
+    /* ----------- Calcul du pas après la première itération ----------- */
+    if (iter > 0)
+    {
+        float pente[3];
+        float pas_vecteur[3];
+
+        for (int k = 0; k < 3; ++k)
+        {
+            pente[k] = (residus_borne_B[k] - residus_borne_A[k]) / (borne_B - borne_A);
+            pas_vecteur[k] = -residus_borne_A[k] / pente[k];
+        }
+
+        /* Si les deux bornes satisfont déjà la contrainte → utiliser largeur de l’intervalle */
+        for (int k = 0; k < 3; ++k)
+        {
+            if (residus_borne_A[k] < 0.0f && residus_borne_B[k] < 0.0f)
+                pas_vecteur[k] = borne_B - borne_A;
+        }
+
+        /* Sélection du pas avec plus petit |pas| */
+        float pas = pas_vecteur[0];
+        float absmin = fabsf(pas_vecteur[0]);
+        for (int k = 1; k < 3; ++k)
+        {
+            float a = fabsf(pas_vecteur[k]);
+            if (a < absmin)
+            {
+                absmin = a;
+                pas = pas_vecteur[k];
+            }
+        }
+
+        /* Calcul de borne_C en respectant I_min / I_max */
+        if (consigne_courant <= 0.0f)
+            borne_C = fmaxf(borne_A + pas, I_min);
+        else
+            borne_C = fminf(borne_A + pas, I_max);
+    }
+    else
+    {
+        /* ----------- Première itération : borne C = courant_requete ----------- */
+        borne_C = courant_requete;
+    }
+
+    /* ---------------------- Évaluation de la borne C ---------------------- */
+
+    float SOC_minmax_C[2], T1_minmax_C[2], T2_minmax_C[2], U_minmax_C[2];
+
+    simuler_horizon_batterie(moins_eta_sur_Q,
+                             dt,
+                             horizon,
+                             SOC_actuel,
+                             SOH_actuel,
+                             coefficients_modele_temperature,
+                             T1_init,
+                             temperature_actuelle,
+                             TAMB,
+                             Ir_init,
+                             etat,
+                             X_OCV_dep,
+                             Y_OCV_dep_charge,
+                             Y_OCV_dep_decharge,
+                             n_OCV,
+                             R1,
+                             C1,
+                             R0,
+                             borne_C,
+                             SOC_minmax_C,
+                             T1_minmax_C,
+                             T2_minmax_C,
+                             U_minmax_C,
+                             NULL);
+
+    float residus_borne_C[3];
+
+    if (consigne_courant > 0.0f) {
+        /* CHARGE */
+        residus_borne_C[0] = SOC_min - SOC_minmax_C[0];
+        residus_borne_C[1] = T2_minmax_C[1] - T_max;
+        residus_borne_C[2] = U_min - U_minmax_C[0];
+    } else {
+        /* DÉCHARGE */
+        residus_borne_C[0] = SOC_minmax_C[1] - SOC_max;
+        residus_borne_C[1] = T2_minmax_C[1] - T_max;
+        residus_borne_C[2] = U_minmax_C[1] - U_max;
+    }
+
+    /* ---------------------- Mise à jour des bornes ---------------------- */
+    bool violation = (residus_borne_C[0] > 0.0f ||
+                      residus_borne_C[1] > 0.0f ||
+                      residus_borne_C[2] > 0.0f);
+
+    if (violation)
+    {
+        /* --- La nouvelle borne viole les contraintes : elle devient borne_B --- */
+        borne_B = borne_C;
+
+        for (int k = 0; k < 3; ++k)
+            residus_borne_B[k] = residus_borne_C[k];
+
+        courant_final = borne_C;
+        for (int k = 0; k < 3; ++k)
+            residus[k] = residus_borne_C[k];
+
+        if (coteA)
+        {
+            for (int k = 0; k < 3; ++k)
+            {
+                float gamma = residus_borne_A[k] /
+                              (residus_borne_A[k] + residus_borne_C[k]);
+                residus_borne_B[k] *= gamma;
+            }
+        }
+
+        coteA = true;
+        coteB = false;
+    }
+    else
+    {
+        /* --- La borne satisfait les contraintes : elle devient borne_A --- */
+        borne_A = borne_C;
+
+        for (int k = 0; k < 3; ++k)
+            residus_borne_A[k] = residus_borne_C[k];
+
+        courant_final = borne_C;
+        for (int k = 0; k < 3; ++k)
+            residus[k] = residus_borne_C[k];
+
+        if (coteB)
+        {
+            for (int k = 0; k < 3; ++k)
+            {
+                float gamma = residus_borne_B[k] /
+                              (residus_borne_B[k] + residus_borne_C[k]);
+                residus_borne_A[k] *= gamma;
+            }
+        }
+
+        coteB = true;
+        coteA = false;
+    }
+}
+
+/* ----------------------- Saturation finale du courant ----------------------- */
+
+if (consigne_courant <= 0.0f)
+    courant_final = fmaxf(consigne_courant, courant_final);
+else
+    courant_final = fminf(consigne_courant, courant_final);
+
+return courant_final;
+
 }
 
 /* ========================================================================== */
@@ -353,6 +771,8 @@ void SOP_predictif(
     const float Kp_Umin       = -5.0f;
 
     const int horizon = 30;       /* horizon de prédiction */
+    float *residus;
+    bool predictif = true;
 
     /* --- Buffers internes (comme dans le script) --- */
     float *courant_resultat          = (float*)calloc(N, sizeof(float));
@@ -374,12 +794,13 @@ void SOP_predictif(
     int   *etat                      = (int*)  calloc(N, sizeof(int));
     float *tampon_charge_decharge    = (float*)calloc(60, sizeof(float));
     float *moyenne_charge_decharge   = (float*)calloc(N, sizeof(float));
+    float *indicateur_boucle         = (float*)calloc(N, sizeof(float));
 
     if (!courant_resultat || !courant_candidat || !delta_I_SOCmax || !delta_I_Umax ||
         !delta_I_SOCmin || !delta_I_Umin || !delta_I_Tmax_charge || !delta_I_Tmax_decharge ||
         !delta_I_Imax || !delta_I_Imin || !delta_I_consigne || !delta_I_candidat ||
         !SOC_actuel || !temperature_actuelle || !tension_actuelle || !Ir ||
-        !etat || !tampon_charge_decharge || !moyenne_charge_decharge)
+        !etat || !tampon_charge_decharge || !moyenne_charge_decharge || !indicateur_boucle)
     {
         fprintf(stderr, "Erreur allocation mémoire dans SOP_predictif\n");
         goto cleanup;
@@ -409,6 +830,7 @@ void SOP_predictif(
         /* 1) Indicateur charge/décharge                                     */
         /* ================================================================== */
         /* Filtre moyenneur sur le courant (tampon de taille 60) */
+        // On fait de la place pour la nouvelle valeure de courant
         for (int k = 59; k > 0; --k)
             tampon_charge_decharge[k] = tampon_charge_decharge[k - 1];
         tampon_charge_decharge[0] = courant[i];
@@ -444,7 +866,7 @@ void SOP_predictif(
             Ir[i], etat[i],
             X_OCV, Y_OCV_charge, Y_OCV_decharge, n_OCV,
             R1, C1_RC, R0,
-            courant[i]              /* courant_requete */
+            courant[i], residus              /* courant_requete */
         );
 
         /* On ne dépasse pas la consigne */
@@ -465,22 +887,253 @@ void SOP_predictif(
         /* 3) Limitation INSTANTANÉE (boucles SOC / U / T)                    */
         /* ================================================================== */
 
-        /* Ici on recopie ligne à ligne le script MATLAB :
-           - mise à jour de SOC_actuel, temperature_actuelle, tension_actuelle
-             à partir des modèles (comme vous l’avez déjà fait dans les autres modules)
-           - calcul des delta_I_* (SOCmax, SOCmin, Umax, Umin, Tmax_charge, Tmax_decharge)
-           - calcul des LIMITES_COURANTS_CHARGE / DECHARGE
-           - calcul de LIMITE_CRITIQUE_COURANTS_*
-           - enfin SOP_CHARGE(i) = LIMITE_CRITIQUE_COURANTS_CHARGE * tension_actuelle(i-1)
-                    SOP_DECHARGE(i) = LIMITE_CRITIQUE_COURANTS_DECHARGE * tension_actuelle(i-1)
-        */
+        /* ----------------- SOC max ----------------- */
+        //float delta_I_SOCmax;
+        if (SOC_actuel[i] >= SOC_max) {
+            /* On impose I = 0 */
+            delta_I_SOCmax[i] = -courant_candidat[i - 1];
+        } else {
+            /* On limite vers I_min */
+            delta_I_SOCmax[i] = I_min - courant_candidat[i - 1];
+        }
 
-        /* Pour l’instant, on se contente de poser SOP basées sur courant_final
-           pour garder un code fonctionnel : à remplacer par la traduction exacte. */
-        SOP_charge[i]   = fmaxf(0.0f, courant_final) * tension[i];
-        SOP_decharge[i] = fminf(0.0f, courant_final) * tension[i];
+        /* ----------------- U max ----------------- */
 
-        courant_final_km1 = courant_final;
+        /* erreur Umax */
+        float erreur_Umax = U_max - tension_actuelle[i - 1];
+
+        /* dérivée de la tension : -(U(k)-U(k-1))/dt */
+        float der_erreur_Umax =
+            -(tension_actuelle[i - 1] - tension_actuelle[i - 2]) / dt;
+
+        /* correcteur PI sur delta_I */
+        delta_I_Umax[i] =
+            Ki_Umax * erreur_Umax + Kp_Umax * der_erreur_Umax;
+
+        /* saturation : delta_I ne peut pas rendre I positif */
+        float max_delta_for_zero = -courant_candidat[i - 1];
+        if (delta_I_Umax[i] > max_delta_for_zero)
+            delta_I_Umax[i] = max_delta_for_zero;
+
+        /* ===================== BOUCLES SOP DÉCHARGE ===================== */
+
+        /* ---------- SOCmin ---------- */
+        if (SOC_actuel[i] <= SOC_min) {
+            /* On impose I = 0 si SOC est en dessous du minimum */
+            delta_I_SOCmin[i] = -courant_candidat[i - 1];
+        } else {
+            /* Sinon, on autorise jusqu'à I_max */
+            delta_I_SOCmin[i] = I_max - courant_candidat[i - 1];
+        }
+
+        /* ---------- Umin ---------- */
+        float erreur_Umin = U_min - tension_actuelle[i - 1];
+        float der_erreur_Umin =
+            -(tension_actuelle[i - 1] - tension_actuelle[i - 2]) / dt;
+
+        delta_I_Umin[i] =
+            Ki_Umin * erreur_Umin + Kp_Umin * der_erreur_Umin;
+
+        /* Saturation : on ne doit pas dépasser ce qui mettrait I à 0 */
+        {
+            float min_delta = -courant_candidat[i - 1];
+            if (delta_I_Umin[i] < min_delta)
+                delta_I_Umin[i] = min_delta;
+        }
+
+        /* ---------- Tmax ---------- */
+        float erreur_Tmax = T_max - temperature_actuelle[i];
+        float der_erreur_Tmax =
+            -(temperature_actuelle[i] - temperature_actuelle[i - 1]) / dt;
+
+        delta_I_Tmax_charge[i] =
+            Ki_T_charge * erreur_Tmax + Kp_T_charge * der_erreur_Tmax;
+
+        delta_I_Tmax_decharge[i] =
+            Ki_T_decharge * erreur_Tmax + Kp_T_decharge * der_erreur_Tmax;
+
+        /* Saturations charge / décharge */
+        {
+            float max_delta_charge = -courant_candidat[i - 1];
+            if (delta_I_Tmax_charge[i] > max_delta_charge)
+                delta_I_Tmax_charge[i] = max_delta_charge;
+
+            float min_delta_decharge = -courant_candidat[i - 1];
+            if (delta_I_Tmax_decharge[i] < min_delta_decharge)
+                delta_I_Tmax_decharge[i] = min_delta_decharge;
+        }
+
+        /* ----- CALCUL DU SOP ----- */
+
+        /* Limites courants en charge */
+        float I_lim_Imin       = courant_candidat[i - 1] + delta_I_Imin[i];
+        float I_lim_SOCmax     = courant_candidat[i - 1] + delta_I_SOCmax[i];
+        float I_lim_Umax       = courant_candidat[i - 1] + delta_I_Umax[i];
+        float I_lim_Tmax_charge= courant_candidat[i - 1] + delta_I_Tmax_charge[i];
+
+        /* Côté charge : on prend la limite la plus "haute" (max) */
+        float LIMITE_CRITIQUE_COURANTS_CHARGE = I_lim_Imin;
+        if (I_lim_SOCmax      > LIMITE_CRITIQUE_COURANTS_CHARGE) LIMITE_CRITIQUE_COURANTS_CHARGE = I_lim_SOCmax;
+        if (I_lim_Umax        > LIMITE_CRITIQUE_COURANTS_CHARGE) LIMITE_CRITIQUE_COURANTS_CHARGE = I_lim_Umax;
+        if (I_lim_Tmax_charge > LIMITE_CRITIQUE_COURANTS_CHARGE) LIMITE_CRITIQUE_COURANTS_CHARGE = I_lim_Tmax_charge;
+
+        /* Limites courants en décharge */
+        float I_lim_Imax          = courant_candidat[i - 1] + delta_I_Imax[i];
+        float I_lim_SOCmin        = courant_candidat[i - 1] + delta_I_SOCmin[i];
+        float I_lim_Umin          = courant_candidat[i - 1] + delta_I_Umin[i];
+        float I_lim_Tmax_decharge = courant_candidat[i - 1] + delta_I_Tmax_decharge[i];
+
+        /* Côté décharge : on prend la limite la plus "basse" (min) */
+        float LIMITE_CRITIQUE_COURANTS_DECHARGE = I_lim_Imax;
+        if (I_lim_SOCmin        < LIMITE_CRITIQUE_COURANTS_DECHARGE) LIMITE_CRITIQUE_COURANTS_DECHARGE = I_lim_SOCmin;
+        if (I_lim_Umin          < LIMITE_CRITIQUE_COURANTS_DECHARGE) LIMITE_CRITIQUE_COURANTS_DECHARGE = I_lim_Umin;
+        if (I_lim_Tmax_decharge < LIMITE_CRITIQUE_COURANTS_DECHARGE) LIMITE_CRITIQUE_COURANTS_DECHARGE = I_lim_Tmax_decharge;
+
+        /* SOP = courant critique * tension */
+        SOP_charge[i]   = LIMITE_CRITIQUE_COURANTS_CHARGE   * tension_actuelle[i - 1];
+        SOP_decharge[i] = LIMITE_CRITIQUE_COURANTS_DECHARGE * tension_actuelle[i - 1];
+
+
+        /* ---------- Limites Imax / Imin ---------- */
+        delta_I_Imax[i] = I_max - courant_candidat[i - 1];
+        delta_I_Imin[i] = I_min - courant_candidat[i - 1];
+
+        float delta_I_consigne;
+
+        if (predictif) {
+            delta_I_consigne = courant_resultat[i] - courant_candidat[i - 1];
+        } else {
+            delta_I_consigne = courant[i] - courant_candidat[i - 1];
+        }
+
+        int   indicateur = 0;
+        float delta_I_candidat;
+
+        /* Première comparaison avec SOCmax */
+        if (delta_I_consigne < delta_I_SOCmax[i]) {
+            indicateur      = 1;
+            delta_I_candidat = delta_I_SOCmax[i];
+        } else {
+            indicateur      = 0;
+            delta_I_candidat = delta_I_consigne;
+        }
+
+        /* Umax */
+        if (delta_I_candidat < delta_I_Umax[i]) {
+            indicateur       = 2;
+            delta_I_candidat = delta_I_Umax[i];
+        }
+
+        /* Tmax charge */
+        if (delta_I_candidat < delta_I_Tmax_charge[i]) {
+            indicateur       = 3;
+            delta_I_candidat = delta_I_Tmax_charge[i];
+        }
+
+        /* SOCmin */
+        if (delta_I_candidat > delta_I_SOCmin[i]) {
+            indicateur       = 4;
+            delta_I_candidat = delta_I_SOCmin[i];
+        }
+
+        /* Umin */
+        if (delta_I_candidat > delta_I_Umin[i]) {
+            indicateur       = 5;
+            delta_I_candidat = delta_I_Umin[i];
+        }
+
+        /* Tmax décharge */
+        if (delta_I_candidat > delta_I_Tmax_decharge[i]) {
+            indicateur       = 6;
+            delta_I_candidat = delta_I_Tmax_decharge[i];
+        }
+
+        /* Imax */
+        if (delta_I_candidat > delta_I_Imax[i]) {
+            indicateur       = 7;
+            delta_I_candidat = delta_I_Imax[i];
+        }
+
+        /* Imin */
+        if (delta_I_candidat < delta_I_Imin[i]) {
+            indicateur       = 8;
+            delta_I_candidat = delta_I_Imin[i];
+        }
+
+        /* Sauvegarde de l'indicateur si vous avez un tableau */
+        indicateur_boucle[i] = indicateur;
+
+        /* Calcul du courant final autorisé */
+        courant_candidat[i] = courant_candidat[i - 1] + dt * delta_I_candidat;
+            
+        /* --- Évaluation de la robustesse : déformation du modèle --- */
+        float courant_SOC         = 1.0f * courant_candidat[i];
+        float courant_temperature = 1.0f * courant_candidat[i];
+        float courant_tension     = 1.0f * courant_candidat[i];
+
+        /* --- Simulation du système sur horizon_simulation pas --- */
+        float SOC = SOC_actuel[i];
+        float T1  = T1_init;
+        float T2  = temperature_actuelle[i];
+
+        /* Ir pour la simulation de la tension “système” (indépendant de l'Ir de l'algo) */
+        float Ir_sys = Ir[i];
+        float U_sys  = 0.0f;
+
+        for (int k = 0; k < horizon; ++k)
+        {
+            /* 1) Avancer le SOC avec courant_SOC */
+            SOC = modele_SOC_CC_step(moins_eta_sur_Q,
+                                    dt,
+                                    SOC,
+                                    courant_SOC,
+                                    SOH[i]);
+
+            /* 2) Avancer le thermique avec courant_temperature */
+            modele_thermique_foster_ordre_2_step(coeffs_thermique,
+                                                courant_temperature,
+                                                dt,
+                                                TAMB,
+                                                &T1,
+                                                &T2);
+
+            /* 3) Avancer la tension “système” avec courant_tension et Ir_sys local */
+            U_sys = modele_tension_1RC_step(courant_tension,
+                                            SOC,
+                                            &Ir_sys,
+                                            etat[i],
+                                            X_OCV_global,
+                                            Y_OCV_charge_global,
+                                            Y_OCV_decharge_global,
+                                            n_OCV,
+                                            dt,
+                                            R1,
+                                            C1_RC,
+                                            R0);
+        }
+
+        /* Mise à jour des états du système simulé pour l'itération suivante */
+        SOC_actuel[i + 1]         = SOC;
+        temperature_actuelle[i + 1] = T2;
+        T1_init                   = T1;
+        tension_actuelle[i + 1]   = U_sys;
+
+        /* --- Mise à jour de l'état Ir de l'algorithme SOP --- */
+        /* On repart de Ir[i], comme en MATLAB, et on le fait évoluer avec le courant réellement appliqué */
+        Ir[i + 1] = Ir[i];
+        (void) modele_tension_1RC_step(courant_candidat[i],
+                                    SOC_actuel[i + 1],
+                                    &Ir[i + 1],
+                                    etat[i],
+                                    X_OCV_global,
+                                    Y_OCV_charge_global,
+                                    Y_OCV_decharge_global,
+                                    n_OCV,
+                                    dt,
+                                    R1,
+                                    C1_RC,
+                                    R0);
+
     }
 
 cleanup:
@@ -503,6 +1156,7 @@ cleanup:
     free(etat);
     free(tampon_charge_decharge);
     free(moyenne_charge_decharge);
+    free(indicateur_boucle);
 }
 
 /* ========================================================================== */
@@ -528,7 +1182,6 @@ void setup_SOP(void)
 
     /* Chargement des données brutes */
     Charge_donnees(&courant, &tension, &temperature, &SOH, &SOC);
-
     /* Paramètres : à reprendre de vos autres modules / fichiers .mat
        (mêmes valeurs que dans le script SOP + surveillance_tension / température) */
     const float moins_eta_sur_Q = 2.3003039e-4f;
@@ -549,9 +1202,9 @@ void setup_SOP(void)
     extern const float Y_OCV_charge_global[104];
     extern const float Y_OCV_decharge_global[104];
 
-    const float R0 = 0.0185f;
-    const float R1 = 0.0130f;
-    const float C1_RC = 653.6309f;
+    const float R0 = 0.022140255136947f;
+    const float R1 = 0.018585867413143f;
+    const float C1_RC = 8.252903566971308e+2f;
 
     const float SOC_min = 0.1f;
     const float SOC_max = 0.9f;
