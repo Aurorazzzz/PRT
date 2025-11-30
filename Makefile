@@ -9,7 +9,7 @@ SRC = script_principal_step.c \
 	  RUL.c \
 	  RINT.c \
 	  Read_Write.c \
-	  #SOC_Reseau_charge_dech.c \
+	  SOC.c
 	  #SOP_Theo.c 
       
 
