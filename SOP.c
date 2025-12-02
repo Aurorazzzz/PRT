@@ -95,11 +95,12 @@ void simuler_horizon_batterie(float moins_eta_sur_Q,
     // Il faut aussi une tension initiale : on peut la calculer une fois
     float U0 = modele_tension_1RC_step(I_candidat, SOC, &Ir,
                                        etat,
-                                       X_OCV_dep,
-                                       Y_OCV_dep_charge,
-                                       Y_OCV_dep_decharge,
+                                       *X_OCV_dep,
+                                       *Y_OCV_dep_charge,
+                                       *Y_OCV_dep_decharge,
                                        n_OCV,
                                        dt, R1, C1, R0);
+    printf("U0=%f\n", U0);
     U_minmax[0] = U0;
     U_minmax[1] = U0;
 
@@ -115,13 +116,14 @@ void simuler_horizon_batterie(float moins_eta_sur_Q,
 
         // 3) Avancer la tension (Ir mis à jour dedans)
         float U = modele_tension_1RC_step(I_candidat, SOC, &Ir,
-                                          etat,
-                                          X_OCV_dep,
-                                          Y_OCV_dep_charge,
-                                          Y_OCV_dep_decharge,
+                                        etat,
+                                          *X_OCV_dep,
+                                          *Y_OCV_dep_charge,
+                                          *Y_OCV_dep_decharge,
                                           n_OCV,
-                                          dt, R1, C1, R0);
-
+                                         dt, R1, C1, R0);
+        printf("k=%f\n", k); 
+        printf("U_blo=%f\n", U);
         // 4) Mettre à jour les min/max
 
         if (SOC < SOC_minmax[0]) SOC_minmax[0] = SOC;
@@ -198,15 +200,18 @@ static float modele_tension_1RC_step(float        I,
     *Ir = alpha * (*Ir) + beta * I;
 
     // Choix table OCV
-    const float *Y_tab = etat ? Y_OCV_dep_decharge : Y_OCV_dep_charge;
+    const float *Y_tab = etat ? &Y_OCV_dep_decharge : &Y_OCV_dep_charge;
 
     // Interpolation OCV(SOC)
     float OCV, der_dummy;
-    interp1rapide_der(X_OCV_dep, Y_tab, n_OCV, SOC, &OCV, &der_dummy);
-
+    interp1rapide_der(&X_OCV_dep, Y_tab, n_OCV, SOC, &OCV, &der_dummy);
+    //printf("OCV=%f\n", OCV);
+    //printf("der=%f\n", der_dummy);
+    
     // Tension
     float U = OCV - R1 * (*Ir) - R0 * I;
-
+    // printf("Ir=%f\n", *Ir);
+    // printf("I=%f\n", I);
     return U;
 }
 /* ========================================================================== */
@@ -463,6 +468,12 @@ static float recherche_racine_SOP_Pegase_1RC(
                               U_minmax_A,
                               NULL);
     
+    //printf("SOC_min_A=%f\n", SOC_minmax_A[0]);
+    printf("SOC_min_A=%f\n", SOC_minmax_A[1]);
+    //printf("U=%f\n", U_minmax_A[0]);
+    printf("U=%f\n", U_minmax_A[1]);
+    //printf("T2=%f\n", T2_minmax_A[0]);
+    printf("T2=%f\n", T2_minmax_A[1]);
     float residus_borne_A[3];
 
     if (consigne_courant > 0.0f) {
@@ -503,8 +514,9 @@ static float recherche_racine_SOP_Pegase_1RC(
 
 
     /* ---------------- Évaluation initiale de la borne B ---------------- */
-
+printf("corant_A=%f\n", courant_candidat_racine);
 courant_candidat_racine = borne_B;
+printf("corant_B=%f\n", courant_candidat_racine);
 
 simuler_horizon_batterie(moins_eta_sur_Q,
                          dt,
@@ -869,6 +881,8 @@ void SOP_predictif(
             courant[i], residus              /* courant_requete */
         );
 
+        //printf("courant_final=%f\n", courant_final);
+
         /* On ne dépasse pas la consigne */
         if (courant[i] > 0.0f)
         {
@@ -1065,6 +1079,7 @@ void SOP_predictif(
 
         /* Calcul du courant final autorisé */
         courant_candidat[i] = courant_candidat[i - 1] + dt * delta_I_candidat;
+        //printf("I_cand=%f\n", courant_candidat[i]);  
             
         /* --- Évaluation de la robustesse : déformation du modèle --- */
         float courant_SOC         = 1.0f * courant_candidat[i];
@@ -1102,9 +1117,9 @@ void SOP_predictif(
                                             SOC,
                                             &Ir_sys,
                                             etat[i],
-                                            X_OCV_global,
-                                            Y_OCV_charge_global,
-                                            Y_OCV_decharge_global,
+                                            X_OCV,
+                                            Y_OCV_charge,
+                                            Y_OCV_decharge,
                                             n_OCV,
                                             dt,
                                             R1,
@@ -1125,9 +1140,9 @@ void SOP_predictif(
                                     SOC_actuel[i + 1],
                                     &Ir[i + 1],
                                     etat[i],
-                                    X_OCV_global,
-                                    Y_OCV_charge_global,
-                                    Y_OCV_decharge_global,
+                                    X_OCV,
+                                    Y_OCV_charge,
+                                    Y_OCV_decharge,
                                     n_OCV,
                                     dt,
                                     R1,
@@ -1170,7 +1185,7 @@ void setup_SOP(void)
     const float *SOH = NULL;
     const float *SOC = NULL;
 
-    const int NbIteration = 1000000;
+    const int NbIteration = 5;
 
     float *SOP_charge   = (float*)malloc(NbIteration * sizeof(float));
     float *SOP_decharge = (float*)malloc(NbIteration * sizeof(float));
@@ -1198,9 +1213,75 @@ void setup_SOP(void)
     /* Vous pouvez soit :
        - redéclarer ici les tables OCV (comme dans surveillance_tension.c),
        - soit les mettre dans un header commun et les déclarer 'extern'. */
-    extern const float X_OCV_global[104];
-    extern const float Y_OCV_charge_global[104];
-    extern const float Y_OCV_decharge_global[104];
+    float X_OCV_global = {
+    0.0,
+    0.0200000000000000,
+    0.0400000000000000,
+    0.0600000000000000,
+    0.0800000000000000,
+    0.150000000000000,
+    0.210000000000000,
+    0.300000000000000,
+    0.400000000000000,
+    0.500000000000000,
+    0.600000000000000,
+    0.700000000000000,
+    0.800000000000000,
+    0.850000000000000,
+    0.900000000000000,
+    0.920000000000000,
+    0.930000000000000,
+    0.950000000000000,
+    0.970000000000000,
+    0.990000000000000,
+    1.0
+};
+const float Y_OCV_charge_global = {
+    2.74615136878047,
+    2.94688704780013,
+    3.04478208162645,
+    3.11302386632185,
+    3.14303727005486,
+    3.18759401184296,
+    3.22099078113839,
+    3.24905171403132,
+    3.27011839999992,
+    3.28534786027309,
+    3.29979224246840,
+    3.31641533857934,
+    3.33973986043135,
+    3.35630007692910,
+    3.38039228328910,
+    3.39594494709583,
+    3.40676702687123,
+    3.44012152068810,
+    3.48795254849592,
+    3.57441784707680,
+    3.60655075278407
+};
+const float Y_OCV_decharge_global= {
+    2.74615136878047,
+    2.94688704780013,
+    3.04478208162645,
+    3.11302386632185,
+    3.14303727005486,
+    3.18759401184296,
+    3.22099078113839,
+    3.24905171403132,
+    3.27011839999992,
+    3.28534786027309,
+    3.29979224246840,
+    3.31641533857934,
+    3.33973986043135,
+    3.35630007692910,
+    3.38039228328910,
+    3.39594494709583,
+    3.40676702687123,
+    3.44012152068810,
+    3.48795254849592,
+    3.57441784707680,
+    3.60655075278407
+};
 
     const float R0 = 0.022140255136947f;
     const float R1 = 0.018585867413143f;
@@ -1220,9 +1301,9 @@ void setup_SOP(void)
         moins_eta_sur_Q,
         coeffs_therm,
         TAMB, T1_init, T2_init,
-        X_OCV_global,
-        Y_OCV_charge_global,
-        Y_OCV_decharge_global,
+        &X_OCV_global,
+        &Y_OCV_charge_global,
+        &Y_OCV_decharge_global,
         104,
         R0, R1, C1_RC,
         SOC_min, SOC_max,
@@ -1242,5 +1323,11 @@ void setup_SOP(void)
     free(SOP_charge);
     free(SOP_decharge);
 
-    printf("Fin du SOP PC !\n");
+    //printf("Fin du SOP PC !\n");
+}
+
+int main(void) {
+    // Votre code
+    setup_SOP();
+    return 0;
 }

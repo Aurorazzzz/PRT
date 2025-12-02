@@ -21,8 +21,8 @@ void Charge_donnees (const float **courant,const float **tension, const float **
     for(int k = 0; k < nFichiers; k++) {
     // Si besoin, tu peux construire un chemin complet
     char chemin[256];
-    //snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
-    snprintf(chemin, sizeof(chemin), "donnees/%s", fichiers[k]);
+    snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
+    //snprintf(chemin, sizeof(chemin), "donnees/%s", fichiers[k]);
     //printf(chemin);
     
     FILE *fp;
@@ -58,7 +58,8 @@ void Free_donnees (const float *courant, const float *tension, const float *temp
 
 int Ecriture_result(float *data, const int NbIteration, const char *nom_fichier){
   char nom_fichier_ext[50];
-  snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), "output/%s.bin", nom_fichier);
+  //snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), "output/%s.bin", nom_fichier);
+  snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), ".bin", nom_fichier);
   //printf("Nom du fichier :");
   //printf("%s\n", nom_fichier_ext);
   FILE *f = fopen(nom_fichier_ext, "wb");
