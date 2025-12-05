@@ -18,18 +18,19 @@ static void interp1rapide_der(const float *x,
                               float       *sortie,
                               float       *der){
     int indice = -1;
-
+    //printf("x_req=%f\n", x_req);
     /* liste_indice = find(x_req > x); indice = max(liste_indice) */
     for (int i = 0; i < n; ++i)
     {
         if (x_req > x[i]) indice = i;
     }
-
+    //printf("indice=%d\n", indice);
     float coord;
     if (indice >= 0 && indice < n - 1)
     {
         /* cas "normal" */
         float dx = x[indice + 1] - x[indice];
+
         if (dx == 0.0f) dx = 1e-9f;
         coord  = (x_req - x[indice]) / dx;
         *der   = (y[indice + 1] - y[indice]) / dx;
@@ -42,6 +43,9 @@ static void interp1rapide_der(const float *x,
         if (dx == 0.0f) dx = 1e-9f;
         coord  = 0.0f;
         *der   = (y[1] - y[0]) / dx;
+        //printf("dx=%f\n", dx);
+        //printf("y=%f\n", y[1] - y[0]);
+        //printf("deriv=%f\n", *der);
     }
     else
     {
@@ -51,9 +55,10 @@ static void interp1rapide_der(const float *x,
         if (dx == 0.0f) dx = 1e-9f;
         coord  = 1.0f;
         *der   = (y[indice + 1] - y[indice]) / dx;
-    }
-
+    } 
+    //printf("y=%f\n", y[indice]);
     *sortie = (1.0f - coord) * y[indice] + coord * y[indice + 1];
+    //printf("sortie=%f\n", *sortie);
 }
 
 void simuler_horizon_batterie(float moins_eta_sur_Q,
@@ -95,12 +100,12 @@ void simuler_horizon_batterie(float moins_eta_sur_Q,
     // Il faut aussi une tension initiale : on peut la calculer une fois
     float U0 = modele_tension_1RC_step(I_candidat, SOC, &Ir,
                                        etat,
-                                       *X_OCV_dep,
-                                       *Y_OCV_dep_charge,
-                                       *Y_OCV_dep_decharge,
+                                       X_OCV_dep,
+                                       Y_OCV_dep_charge,
+                                       Y_OCV_dep_decharge,
                                        n_OCV,
                                        dt, R1, C1, R0);
-    printf("U0=%f\n", U0);
+    //printf("U0=%f\n", U0);
     U_minmax[0] = U0;
     U_minmax[1] = U0;
 
@@ -109,7 +114,7 @@ void simuler_horizon_batterie(float moins_eta_sur_Q,
     {
         // 1) Avancer le SOC
         SOC = modele_SOC_CC_step(moins_eta_sur_Q, dt, SOC, I_candidat, SOH);
-
+        //printf("SOC_ten=%f\n", SOC); 
         // 2) Avancer le thermique
         modele_thermique_foster_ordre_2_step(parametre_therm, I_candidat, dt, TAMB,
                                              &T1, &T2);
@@ -117,13 +122,13 @@ void simuler_horizon_batterie(float moins_eta_sur_Q,
         // 3) Avancer la tension (Ir mis à jour dedans)
         float U = modele_tension_1RC_step(I_candidat, SOC, &Ir,
                                         etat,
-                                          *X_OCV_dep,
-                                          *Y_OCV_dep_charge,
-                                          *Y_OCV_dep_decharge,
+                                          X_OCV_dep,
+                                          Y_OCV_dep_charge,
+                                          Y_OCV_dep_decharge,
                                           n_OCV,
                                          dt, R1, C1, R0);
-        printf("k=%f\n", k); 
-        printf("U_blo=%f\n", U);
+        //printf("k=%f\n", k); 
+        //printf("U_blo=%f\n", U);
         // 4) Mettre à jour les min/max
 
         if (SOC < SOC_minmax[0]) SOC_minmax[0] = SOC;
@@ -148,6 +153,9 @@ static float modele_SOC_CC_step(float moins_eta_sur_Q,
                                 float I,
                                 float SOH)
 {
+    // printf("SOC_prev=%f\n", SOC_prev);
+    // printf("I=%f\n", I);
+    // printf("dt=%f\n", dt);
     return SOC_prev - moins_eta_sur_Q * dt * I / SOH;
 }
 
@@ -198,13 +206,15 @@ static float modele_tension_1RC_step(float        I,
 
     // Mise à jour Ir
     *Ir = alpha * (*Ir) + beta * I;
-
+    //printf("Ir=%f\n", *Ir);
+    
     // Choix table OCV
-    const float *Y_tab = etat ? &Y_OCV_dep_decharge : &Y_OCV_dep_charge;
+    const float *Y_tab = etat ? Y_OCV_dep_decharge : Y_OCV_dep_charge;
 
     // Interpolation OCV(SOC)
     float OCV, der_dummy;
-    interp1rapide_der(&X_OCV_dep, Y_tab, n_OCV, SOC, &OCV, &der_dummy);
+    interp1rapide_der(X_OCV_dep, Y_tab, n_OCV, SOC, &OCV, &der_dummy);
+    //OCV = 0;
     //printf("OCV=%f\n", OCV);
     //printf("der=%f\n", der_dummy);
     
@@ -443,6 +453,8 @@ static float recherche_racine_SOP_Pegase_1RC(
     //                    dt, R1, C1, R0, horizon,
     //                    U_pred, NULL);
 
+    //printf("SOC_actuel=%f\n", SOC_actuel);
+
     simuler_horizon_batterie(moins_eta_sur_Q,
                               dt,
                               horizon,
@@ -468,12 +480,18 @@ static float recherche_racine_SOP_Pegase_1RC(
                               U_minmax_A,
                               NULL);
     
+    //printf("SOC_actuel=%f\n", SOC_actuel);
+    //printf("courant_racine=%f\n", courant_candidat_racine);                          
     //printf("SOC_min_A=%f\n", SOC_minmax_A[0]);
-    printf("SOC_min_A=%f\n", SOC_minmax_A[1]);
-    //printf("U=%f\n", U_minmax_A[0]);
-    printf("U=%f\n", U_minmax_A[1]);
-    //printf("T2=%f\n", T2_minmax_A[0]);
-    printf("T2=%f\n", T2_minmax_A[1]);
+    //printf("SOC_max_A=%f\n", SOC_minmax_A[1]);
+    // // printf("SOc_pred=%f\n", SOC_min_predit);
+    // //printf("U=%f\n", U_minmax_A[0]);
+    // printf("U=%f\n", U_minmax_A[1]);
+    // //printf("T2=%f\n", T2_minmax_A[0]);
+    // printf("T2=%f\n", T2_minmax_A[1]);
+
+    // printf("corant_A=%f\n", courant_candidat_racine);
+    //printf("courant_vrzi=%f\n", consigne_courant);
     float residus_borne_A[3];
 
     if (consigne_courant > 0.0f) {
@@ -509,14 +527,17 @@ static float recherche_racine_SOP_Pegase_1RC(
         residus_borne_A[1] > 0.0f ||
         residus_borne_A[2] > 0.0f)
     {
+         //printf("residus_A_0=%f\n", residus_borne_A[0]);
+         //printf("residus_A_1=%f\n", residus_borne_A[1]);
+         //printf("residus_A_2=%f\n", residus_borne_A[2]);
         return 0.0f;
     }
 
 
     /* ---------------- Évaluation initiale de la borne B ---------------- */
-printf("corant_A=%f\n", courant_candidat_racine);
+//printf("corant_A=%f\n", courant_candidat_racine);
 courant_candidat_racine = borne_B;
-printf("corant_B=%f\n", courant_candidat_racine);
+//printf("corant_B=%f\n", courant_candidat_racine);
 
 simuler_horizon_batterie(moins_eta_sur_Q,
                          dt,
@@ -571,13 +592,14 @@ if (residus_borne_B[0] < 0.0f &&
     residus_borne_B[1] < 0.0f &&
     residus_borne_B[2] < 0.0f)
 {
+    //printf("residus_B_0, on s'est fait avoir=\n");
     return borne_B;
 }
-
+//printf("residus_B_0, ou pas\n");
 for (int iter = 0; iter < 12; ++iter)
 {
     float borne_C;
-
+    //printf("Iteration=%d\n", iter);
     /* ----------- Calcul du pas après la première itération ----------- */
     if (iter > 0)
     {
@@ -619,6 +641,7 @@ for (int iter = 0; iter < 12; ++iter)
     else
     {
         /* ----------- Première itération : borne C = courant_requete ----------- */
+        //printf("première itération\n");
         borne_C = courant_requete;
     }
 
@@ -652,7 +675,7 @@ for (int iter = 0; iter < 12; ++iter)
                              NULL);
 
     float residus_borne_C[3];
-
+    //printf("borne_C=%f\n", borne_C);
     if (consigne_courant > 0.0f) {
         /* CHARGE */
         residus_borne_C[0] = SOC_min - SOC_minmax_C[0];
@@ -672,6 +695,7 @@ for (int iter = 0; iter < 12; ++iter)
 
     if (violation)
     {
+        //printf("La borne viole les contraintes\n");
         /* --- La nouvelle borne viole les contraintes : elle devient borne_B --- */
         borne_B = borne_C;
 
@@ -697,18 +721,23 @@ for (int iter = 0; iter < 12; ++iter)
     }
     else
     {
-        /* --- La borne satisfait les contraintes : elle devient borne_A --- */
+        //printf("La borne satisfait les contraintes\n");
+           /* --- La borne satisfait les contraintes : elle devient borne_A --- */
         borne_A = borne_C;
 
         for (int k = 0; k < 3; ++k)
             residus_borne_A[k] = residus_borne_C[k];
+            //printf("residus_borne_A_0=%f\n", residus_borne_A[0]);
 
         courant_final = borne_C;
-        for (int k = 0; k < 3; ++k)
-            residus[k] = residus_borne_C[k];
+        for (int k = 0; k < 3; ++k){
+            //printf("k=%d\n", k);
+            residus[k] = residus_borne_C[k];}
+            //printf("residus_0=%f\n", residus[0]);
 
         if (coteB)
         {
+            //printf("Mise à jour gamma coteB=true\n");
             for (int k = 0; k < 3; ++k)
             {
                 float gamma = residus_borne_B[k] /
@@ -719,8 +748,10 @@ for (int iter = 0; iter < 12; ++iter)
 
         coteB = true;
         coteA = false;
+        //printf("coteB=true\n");
     }
 }
+//printf("courant_final=\n");
 
 /* ----------------------- Saturation finale du courant ----------------------- */
 
@@ -729,6 +760,7 @@ if (consigne_courant <= 0.0f)
 else
     courant_final = fminf(consigne_courant, courant_final);
 
+//printf("courant_final=%f\n", courant_final);
 return courant_final;
 
 }
@@ -783,7 +815,7 @@ void SOP_predictif(
     const float Kp_Umin       = -5.0f;
 
     const int horizon = 30;       /* horizon de prédiction */
-    float *residus;
+    float residus[3];
     bool predictif = true;
 
     /* --- Buffers internes (comme dans le script) --- */
@@ -833,7 +865,7 @@ void SOP_predictif(
 
     Ir[0] = 0.0f; Ir[1] = 0.0f; Ir[2] = 0.0f;
 
-    float courant_final_km1 = courant[0];
+    float courant_final_km1 = -courant[0];
 
     /* Boucle principale i = 3 : L-1 => indices [2 .. N-2] en C */
     for (size_t i = 2; i < N - 1; ++i)
@@ -845,7 +877,7 @@ void SOP_predictif(
         // On fait de la place pour la nouvelle valeure de courant
         for (int k = 59; k > 0; --k)
             tampon_charge_decharge[k] = tampon_charge_decharge[k - 1];
-        tampon_charge_decharge[0] = courant[i];
+        tampon_charge_decharge[0] = -courant[i];
 
         /* moyenne */
         float somme = 0.0f;
@@ -874,25 +906,26 @@ void SOP_predictif(
             T1_init, temperature_actuelle[i], TAMB,
             SOC_min, SOC_max, U_min, U_max, T_max,
             I_min, I_max,
-            courant[i],             /* consigne_courant */
+            -courant[i],             /* consigne_courant */
             Ir[i], etat[i],
             X_OCV, Y_OCV_charge, Y_OCV_decharge, n_OCV,
             R1, C1_RC, R0,
-            courant[i], residus              /* courant_requete */
+            -courant[i], residus              /* courant_requete */
         );
 
-        //printf("courant_final=%f\n", courant_final);
+        printf("courant_final=%f\n", courant_final);
+        printf("boucle=%zu\n", i);
 
         /* On ne dépasse pas la consigne */
-        if (courant[i] > 0.0f)
+        if (-courant[i] > 0.0f)
         {
-            if (courant_final > courant[i])
-                courant_final = courant[i];
+            if (courant_final > -courant[i])
+                courant_final = -courant[i];
         }
         else
         {
-            if (courant_final < courant[i])
-                courant_final = courant[i];
+            if (courant_final < -courant[i])
+                courant_final = -courant[i];
         }
 
         courant_resultat[i] = courant_final;
@@ -1017,7 +1050,7 @@ void SOP_predictif(
         if (predictif) {
             delta_I_consigne = courant_resultat[i] - courant_candidat[i - 1];
         } else {
-            delta_I_consigne = courant[i] - courant_candidat[i - 1];
+            delta_I_consigne = -courant[i] - courant_candidat[i - 1];
         }
 
         int   indicateur = 0;
@@ -1095,7 +1128,7 @@ void SOP_predictif(
         float Ir_sys = Ir[i];
         float U_sys  = 0.0f;
 
-        for (int k = 0; k < horizon; ++k)
+        for (int k = 0; k < 1; ++k)
         {
             /* 1) Avancer le SOC avec courant_SOC */
             SOC = modele_SOC_CC_step(moins_eta_sur_Q,
@@ -1103,7 +1136,8 @@ void SOP_predictif(
                                     SOC,
                                     courant_SOC,
                                     SOH[i]);
-
+            //printf("k=%d\n", k);
+            //printf("SOC=%f\n", SOC);
             /* 2) Avancer le thermique avec courant_temperature */
             modele_thermique_foster_ordre_2_step(coeffs_thermique,
                                                 courant_temperature,
@@ -1149,7 +1183,18 @@ void SOP_predictif(
                                     C1_RC,
                                     R0);
 
+        printf("La valeur est : %d\n", etat[i]);
+
     }
+
+Ecriture_result(courant_resultat, 10000, "courant_resultat_PC_result");
+Ecriture_result(SOC_actuel, 10000, "SOP_PC_result");
+Ecriture_result(tension_actuelle, 10000, "TENSION_PC_result");
+Ecriture_result(temperature_actuelle, 10000, "TEMPERATURE_PC_result");
+Ecriture_result_int(etat, 10000, "Etat_C");
+
+
+
 
 cleanup:
     free(courant_resultat);
@@ -1185,7 +1230,7 @@ void setup_SOP(void)
     const float *SOH = NULL;
     const float *SOC = NULL;
 
-    const int NbIteration = 5;
+    const int NbIteration = 10000;
 
     float *SOP_charge   = (float*)malloc(NbIteration * sizeof(float));
     float *SOP_decharge = (float*)malloc(NbIteration * sizeof(float));
@@ -1213,7 +1258,11 @@ void setup_SOP(void)
     /* Vous pouvez soit :
        - redéclarer ici les tables OCV (comme dans surveillance_tension.c),
        - soit les mettre dans un header commun et les déclarer 'extern'. */
-    float X_OCV_global = {
+    
+    int n_OCV = 21;
+
+
+    const float X_OCV_global[] = {
     0.0,
     0.0200000000000000,
     0.0400000000000000,
@@ -1236,7 +1285,7 @@ void setup_SOP(void)
     0.990000000000000,
     1.0
 };
-const float Y_OCV_charge_global = {
+const float Y_OCV_charge_global[] = {
     2.74615136878047,
     2.94688704780013,
     3.04478208162645,
@@ -1259,7 +1308,7 @@ const float Y_OCV_charge_global = {
     3.57441784707680,
     3.60655075278407
 };
-const float Y_OCV_decharge_global= {
+const float Y_OCV_decharge_global[]= {
     2.74615136878047,
     2.94688704780013,
     3.04478208162645,
@@ -1273,13 +1322,13 @@ const float Y_OCV_decharge_global= {
     3.29979224246840,
     3.31641533857934,
     3.33973986043135,
-    3.35630007692910,
-    3.38039228328910,
-    3.39594494709583,
-    3.40676702687123,
-    3.44012152068810,
-    3.48795254849592,
-    3.57441784707680,
+    3.350334634002046,
+    3.360929407572744,
+    3.365167317001023,
+    3.367286271715163,
+    3.371524181143442,
+    3.375762090571721,
+    3.380000000000000,
     3.60655075278407
 };
 
@@ -1301,10 +1350,10 @@ const float Y_OCV_decharge_global= {
         moins_eta_sur_Q,
         coeffs_therm,
         TAMB, T1_init, T2_init,
-        &X_OCV_global,
-        &Y_OCV_charge_global,
-        &Y_OCV_decharge_global,
-        104,
+        X_OCV_global,
+        Y_OCV_charge_global,
+        Y_OCV_decharge_global,
+        n_OCV,
         R0, R1, C1_RC,
         SOC_min, SOC_max,
         U_min, U_max,
@@ -1315,8 +1364,8 @@ const float Y_OCV_decharge_global= {
     );
 
     /* Écriture des résultats */
-    Ecriture_result(SOP_charge,   NbIteration, "SOP_CHARGE_PC_result");
-    Ecriture_result(SOP_decharge, NbIteration, "SOP_DECHARGE_PC_result");
+    //Ecriture_result(SOP_charge,   NbIteration, "SOP_CHARGE_PC_result");
+    //Ecriture_result(SOP_decharge, NbIteration, "SOP_DECHARGE_PC_result");
 
     Free_donnees(courant, tension, temperature, SOH, SOC);
 

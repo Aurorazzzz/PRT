@@ -59,9 +59,9 @@ void Free_donnees (const float *courant, const float *tension, const float *temp
 int Ecriture_result(float *data, const int NbIteration, const char *nom_fichier){
   char nom_fichier_ext[50];
   //snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), "output/%s.bin", nom_fichier);
-  snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), ".bin", nom_fichier);
-  //printf("Nom du fichier :");
-  //printf("%s\n", nom_fichier_ext);
+  snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), "%s.bin", nom_fichier);
+  printf("Nom du fichier :");
+  printf("%s\n", nom_fichier_ext);
   FILE *f = fopen(nom_fichier_ext, "wb");
   if (!f) {
         perror("Erreur ouverture fichier");
@@ -70,7 +70,30 @@ int Ecriture_result(float *data, const int NbIteration, const char *nom_fichier)
 
     fwrite(data, sizeof(float), NbIteration, f);
 
-    //printf("SOC[0] = %f, SOC[%zu] = %f\n", data[0], NbIteration-1, data[NbIteration-1]);
+    printf("SOC[0] = %f, SOC[%zu] = %f\n", data[0], NbIteration-1, data[NbIteration-1]);
+
+    fclose(f);
+
+    //free(data);  
+
+    return 0;
+}
+
+int Ecriture_result_int(int *data, const int NbIteration, const char *nom_fichier){
+  char nom_fichier_ext[50];
+  //snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), "output/%s.bin", nom_fichier);
+  snprintf(nom_fichier_ext, sizeof(nom_fichier_ext), "%s.bin", nom_fichier);
+  printf("Nom du fichier :");
+  printf("%s\n", nom_fichier_ext);
+  FILE *f = fopen(nom_fichier_ext, "wb");
+  if (!f) {
+        perror("Erreur ouverture fichier");
+        return 1;
+    }
+
+    fwrite(data, sizeof(int), NbIteration, f);
+
+    printf("SOC[0] = %d, SOC[%zu] = %d\n", data[0], NbIteration-1, data[NbIteration-1]);
 
     fclose(f);
 
