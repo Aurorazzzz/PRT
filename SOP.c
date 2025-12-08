@@ -530,8 +530,9 @@ static float recherche_racine_SOP_Pegase_1RC(
          //printf("residus_A_0=%f\n", residus_borne_A[0]);
          //printf("residus_A_1=%f\n", residus_borne_A[1]);
          //printf("residus_A_2=%f\n", residus_borne_A[2]);
-        return 0.0f;
-    }
+        //return 0.0f;
+        courant_final = borne_A;
+    }else{
 
 
     /* ---------------- Évaluation initiale de la borne B ---------------- */
@@ -592,9 +593,10 @@ if (residus_borne_B[0] < 0.0f &&
     residus_borne_B[1] < 0.0f &&
     residus_borne_B[2] < 0.0f)
 {
-    //printf("residus_B_0, on s'est fait avoir=\n");
-    return borne_B;
-}
+    printf("residus_B_0, on s'est fait avoir=\n");
+    courant_final = borne_B;
+    //return borne_B;
+}else{
 //printf("residus_B_0, ou pas\n");
 for (int iter = 0; iter < 12; ++iter)
 {
@@ -750,7 +752,7 @@ for (int iter = 0; iter < 12; ++iter)
         coteA = false;
         //printf("coteB=true\n");
     }
-}
+}}}
 //printf("courant_final=\n");
 
 /* ----------------------- Saturation finale du courant ----------------------- */
@@ -839,12 +841,13 @@ void SOP_predictif(
     float *tampon_charge_decharge    = (float*)calloc(60, sizeof(float));
     float *moyenne_charge_decharge   = (float*)calloc(N, sizeof(float));
     float *indicateur_boucle         = (float*)calloc(N, sizeof(float));
+    float *courant_predi = (float*)calloc(N, sizeof(float)); 
 
     if (!courant_resultat || !courant_candidat || !delta_I_SOCmax || !delta_I_Umax ||
         !delta_I_SOCmin || !delta_I_Umin || !delta_I_Tmax_charge || !delta_I_Tmax_decharge ||
         !delta_I_Imax || !delta_I_Imin || !delta_I_consigne || !delta_I_candidat ||
         !SOC_actuel || !temperature_actuelle || !tension_actuelle || !Ir ||
-        !etat || !tampon_charge_decharge || !moyenne_charge_decharge || !indicateur_boucle)
+        !etat || !tampon_charge_decharge || !moyenne_charge_decharge || !indicateur_boucle || !courant_predi)
     {
         fprintf(stderr, "Erreur allocation mémoire dans SOP_predictif\n");
         goto cleanup;
@@ -915,18 +918,24 @@ void SOP_predictif(
 
         printf("courant_final=%f\n", courant_final);
         printf("boucle=%zu\n", i);
-
+        courant_predi[i] = courant_final;
+        //printf("courant_predi %f\n", courant_predi[i]);
         /* On ne dépasse pas la consigne */
         if (-courant[i] > 0.0f)
         {
-            if (courant_final > -courant[i])
+            //printf("1.0");
+            if (courant_final > -courant[i]){
+                //printf("1.0.1");
                 courant_final = -courant[i];
+            }
         }
         else
         {
-            if (courant_final < -courant[i])
+            //printf("1.1");
+            if (courant_final < -courant[i]){
+                //printf("1.1.1");
                 courant_final = -courant[i];
-        }
+        }}
 
         courant_resultat[i] = courant_final;
 
@@ -937,9 +946,11 @@ void SOP_predictif(
         /* ----------------- SOC max ----------------- */
         //float delta_I_SOCmax;
         if (SOC_actuel[i] >= SOC_max) {
+            //printf("2.0");
             /* On impose I = 0 */
             delta_I_SOCmax[i] = -courant_candidat[i - 1];
         } else {
+            //printf("2.1");
             /* On limite vers I_min */
             delta_I_SOCmax[i] = I_min - courant_candidat[i - 1];
         }
@@ -966,9 +977,11 @@ void SOP_predictif(
 
         /* ---------- SOCmin ---------- */
         if (SOC_actuel[i] <= SOC_min) {
+            //printf("3.0");
             /* On impose I = 0 si SOC est en dessous du minimum */
             delta_I_SOCmin[i] = -courant_candidat[i - 1];
         } else {
+            //printf("3.1");
             /* Sinon, on autorise jusqu'à I_max */
             delta_I_SOCmin[i] = I_max - courant_candidat[i - 1];
         }
@@ -1012,6 +1025,11 @@ void SOP_predictif(
 
         /* ----- CALCUL DU SOP ----- */
 
+        /* ---------- Limites Imax / Imin ---------- */
+        delta_I_Imax[i] = I_max - courant_candidat[i - 1];
+        delta_I_Imin[i] = I_min - courant_candidat[i - 1];
+
+
         /* Limites courants en charge */
         float I_lim_Imin       = courant_candidat[i - 1] + delta_I_Imin[i];
         float I_lim_SOCmax     = courant_candidat[i - 1] + delta_I_SOCmax[i];
@@ -1041,15 +1059,17 @@ void SOP_predictif(
         SOP_decharge[i] = LIMITE_CRITIQUE_COURANTS_DECHARGE * tension_actuelle[i - 1];
 
 
-        /* ---------- Limites Imax / Imin ---------- */
-        delta_I_Imax[i] = I_max - courant_candidat[i - 1];
-        delta_I_Imin[i] = I_min - courant_candidat[i - 1];
+        // /* ---------- Limites Imax / Imin ---------- */
+        // delta_I_Imax[i] = I_max - courant_candidat[i - 1];
+        // delta_I_Imin[i] = I_min - courant_candidat[i - 1];
 
         float delta_I_consigne;
 
         if (predictif) {
+            //printf("4.0");
             delta_I_consigne = courant_resultat[i] - courant_candidat[i - 1];
         } else {
+            //printf("4.1");
             delta_I_consigne = -courant[i] - courant_candidat[i - 1];
         }
 
@@ -1058,51 +1078,61 @@ void SOP_predictif(
 
         /* Première comparaison avec SOCmax */
         if (delta_I_consigne < delta_I_SOCmax[i]) {
+            //printf("5.0");
             indicateur      = 1;
             delta_I_candidat = delta_I_SOCmax[i];
         } else {
+            //printf("5.1");
             indicateur      = 0;
             delta_I_candidat = delta_I_consigne;
         }
 
         /* Umax */
         if (delta_I_candidat < delta_I_Umax[i]) {
+            //printf("6.0");
             indicateur       = 2;
             delta_I_candidat = delta_I_Umax[i];
+            //printf("delta_I_6=%f\n", delta_I_candidat);
         }
 
         /* Tmax charge */
         if (delta_I_candidat < delta_I_Tmax_charge[i]) {
+            //printf("7");
             indicateur       = 3;
             delta_I_candidat = delta_I_Tmax_charge[i];
         }
 
         /* SOCmin */
         if (delta_I_candidat > delta_I_SOCmin[i]) {
+            //printf("8");
             indicateur       = 4;
             delta_I_candidat = delta_I_SOCmin[i];
         }
 
         /* Umin */
         if (delta_I_candidat > delta_I_Umin[i]) {
+            //printf("9");
             indicateur       = 5;
             delta_I_candidat = delta_I_Umin[i];
         }
 
         /* Tmax décharge */
         if (delta_I_candidat > delta_I_Tmax_decharge[i]) {
+            //printf("10");
             indicateur       = 6;
             delta_I_candidat = delta_I_Tmax_decharge[i];
         }
 
         /* Imax */
         if (delta_I_candidat > delta_I_Imax[i]) {
+            //printf("11");
             indicateur       = 7;
             delta_I_candidat = delta_I_Imax[i];
         }
 
         /* Imin */
         if (delta_I_candidat < delta_I_Imin[i]) {
+            //printf("12");
             indicateur       = 8;
             delta_I_candidat = delta_I_Imin[i];
         }
@@ -1111,6 +1141,8 @@ void SOP_predictif(
         indicateur_boucle[i] = indicateur;
 
         /* Calcul du courant final autorisé */
+        //printf("delta_I_fin=%f\n", delta_I_candidat);
+        //printf("courant i moins un=%f\n", courant_candidat[i - 1]);
         courant_candidat[i] = courant_candidat[i - 1] + dt * delta_I_candidat;
         //printf("I_cand=%f\n", courant_candidat[i]);  
             
@@ -1167,6 +1199,8 @@ void SOP_predictif(
         T1_init                   = T1;
         tension_actuelle[i + 1]   = U_sys;
 
+        etat[i+1]=etat[i];
+
         /* --- Mise à jour de l'état Ir de l'algorithme SOP --- */
         /* On repart de Ir[i], comme en MATLAB, et on le fait évoluer avec le courant réellement appliqué */
         Ir[i + 1] = Ir[i];
@@ -1183,15 +1217,18 @@ void SOP_predictif(
                                     C1_RC,
                                     R0);
 
-        printf("La valeur est : %d\n", etat[i]);
+        printf("La valeur est : %f\n", courant_candidat[i]);
 
     }
 
-Ecriture_result(courant_resultat, 10000, "courant_resultat_PC_result");
-Ecriture_result(SOC_actuel, 10000, "SOP_PC_result");
-Ecriture_result(tension_actuelle, 10000, "TENSION_PC_result");
-Ecriture_result(temperature_actuelle, 10000, "TEMPERATURE_PC_result");
-Ecriture_result_int(etat, 10000, "Etat_C");
+
+//printf("etat %d\n", etat[9998]);
+Ecriture_result(courant_candidat, N, "courant_resultat_PC_result");
+Ecriture_result(SOC_actuel, N, "SOP_PC_result");
+Ecriture_result(tension_actuelle, N, "TENSION_PC_result");
+Ecriture_result(temperature_actuelle, N, "TEMPERATURE_PC_result");
+Ecriture_result_int(etat, N, "Etat_C");
+Ecriture_result(courant_predi, N, "Courant_predi");
 
 
 
