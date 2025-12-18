@@ -41,7 +41,10 @@ void surveillance_tension(float courant,
 
     // Interpolation OCV(SOC)
     float OCV = interp1Drapide(X_OCV, Y_tab, n_OCV, SOC);
+    printf("OCV : %f\n", OCV);
 
+    printf("courant : %f\n", courant);
+    printf("Ir : %f\n", *Ir);
     // Tension modèle : U = OCV - R1*Ir - R0*courant
     float U_loc = OCV - R1 * (*Ir) - R0 * courant;
     *U = U_loc;
@@ -62,7 +65,7 @@ void TENSION_setup(void)
     const float *SOH = NULL;
     const float *SOC_simu = NULL;
 
-    const int NbIteration = 1000000;
+    const int NbIteration = 10000;
 
     float *vecteur_U = malloc(NbIteration * sizeof(float));
     float *vecteur_alerte = malloc(NbIteration * sizeof(float));
@@ -73,9 +76,9 @@ void TENSION_setup(void)
     }
 
     float dt = 1.0f;
-    float R1 = 0.0130f;
-    float C1 = 653.6309f;
-    float R0 = 0.0185f;
+    float R1 = 0.013036399952773f;
+    float C1 = 653.6308681504105f;
+    float R0 = 0.018462339056011f;
     float seuil = 1.0f;
 
     float Ir = 0.0f;
@@ -131,6 +134,8 @@ void TENSION_setup(void)
             &alerte
         );
 
+        printf("Tension : %f\n", U_model);
+        printf("Boucle : %d\n", U_model);
         vecteur_U[i]      = U_model;
         vecteur_alerte[i] = (float)alerte;
     }
@@ -145,10 +150,9 @@ void TENSION_setup(void)
     free(vecteur_alerte);
 }
 
-/*
 int main()
 {
     TENSION_setup();
     printf("Fin du programme !\n");
     return 0;
-}*/
+}

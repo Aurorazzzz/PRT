@@ -215,7 +215,7 @@ static float modele_tension_1RC_step(float        I,
     float OCV, der_dummy;
     interp1rapide_der(X_OCV_dep, Y_tab, n_OCV, SOC, &OCV, &der_dummy);
     //OCV = 0;
-    //printf("OCV=%f\n", OCV);
+    printf("OCV=%f\n", OCV);
     //printf("der=%f\n", der_dummy);
     
     // Tension
@@ -916,7 +916,7 @@ void SOP_predictif(
             -courant[i], residus              /* courant_requete */
         );
 
-        printf("courant_final=%f\n", courant_final);
+        //printf("courant_final=%f\n", courant_final);
         printf("boucle=%zu\n", i);
         courant_predi[i] = courant_final;
         //printf("courant_predi %f\n", courant_predi[i]);
@@ -1178,6 +1178,8 @@ void SOP_predictif(
                                                 &T1,
                                                 &T2);
 
+
+            printf("courant_tension %f\n", courant_tension);
             /* 3) Avancer la tension “système” avec courant_tension et Ir_sys local */
             U_sys = modele_tension_1RC_step(courant_tension,
                                             SOC,
@@ -1198,7 +1200,7 @@ void SOP_predictif(
         temperature_actuelle[i + 1] = T2;
         T1_init                   = T1;
         tension_actuelle[i + 1]   = U_sys;
-
+        printf("Tensions actuelle i + 1 %f\n", tension_actuelle[i+1]);
         etat[i+1]=etat[i];
 
         /* --- Mise à jour de l'état Ir de l'algorithme SOP --- */
@@ -1217,7 +1219,8 @@ void SOP_predictif(
                                     C1_RC,
                                     R0);
 
-        printf("La valeur est : %f\n", courant_candidat[i]);
+        //printf("La valeur est : %f\n", courant_candidat[i]);
+        //printf("itération : %f\n", i);
 
     }
 
@@ -1267,7 +1270,7 @@ void setup_SOP(void)
     const float *SOH = NULL;
     const float *SOC = NULL;
 
-    const int NbIteration = 10000;
+    const int NbIteration = 975;
 
     float *SOP_charge   = (float*)malloc(NbIteration * sizeof(float));
     float *SOP_decharge = (float*)malloc(NbIteration * sizeof(float));
@@ -1346,19 +1349,19 @@ const float Y_OCV_charge_global[] = {
     3.60655075278407
 };
 const float Y_OCV_decharge_global[]= {
-    2.74615136878047,
-    2.94688704780013,
-    3.04478208162645,
-    3.11302386632185,
-    3.14303727005486,
-    3.18759401184296,
-    3.22099078113839,
-    3.24905171403132,
-    3.27011839999992,
-    3.28534786027309,
-    3.29979224246840,
-    3.31641533857934,
-    3.33973986043135,
+    2.746151368780468,
+    2.946887047800132,
+    3.044782081626454,
+    3.113023866321848,
+    3.143037270054857,
+    3.187594011842960,
+    3.220990781138394,
+    3.249051714031321,
+    3.270118399999917,
+    3.285347860273093,
+    3.299792242468398,
+    3.316415338579337,
+    3.339739860431349,
     3.350334634002046,
     3.360929407572744,
     3.365167317001023,
@@ -1366,7 +1369,7 @@ const float Y_OCV_decharge_global[]= {
     3.371524181143442,
     3.375762090571721,
     3.380000000000000,
-    3.60655075278407
+    3.606550752784074
 };
 
     const float R0 = 0.022140255136947f;
