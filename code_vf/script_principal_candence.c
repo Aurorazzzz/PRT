@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -15,6 +16,19 @@
 static double duree_en_seconde(clock_t t0, clock_t t1)
 {
     return (double)(t1 - t0) / (double)CLOCKS_PER_SEC;
+}
+
+// Ajoute un nombre de nanosecondes à une timespec (gère les dépassements)
+static struct timespec add_ns(struct timespec t, int64_t ns)
+{
+    t.tv_nsec += ns;
+
+    // Si on dépasse 1 seconde en nanosecondes, on “porte” dans tv_sec
+    while (t.tv_nsec >= 1000000000L) {
+        t.tv_sec++;
+        t.tv_nsec -= 1000000000L;
+    }
+    return t;
 }
 
 int main(void)
@@ -50,6 +64,12 @@ int main(void)
     double temp_RUL_last    = 0.0;
     double temp_RINT_last   = 0.0;
     double temp_SOC_last    = 0.0;
+
+    // Constantes pour le cadencement
+
+    const int hz = 1;
+    const int64_t period_ns = 1000000000LL / hz;
+    struct timespec next;
 
     // =====================================================================
     // 2) Allocation des vecteurs de résultats
@@ -127,8 +147,22 @@ int main(void)
     // =====================================================================
     // 5) Boucle principale unique, cadence "logique" de 1 seconde
     // =====================================================================
+    
+    clock_gettime(CLOCK_MONOTONIC, &next);
+    next = add_ns(next, period_ns);
+
     for (int k = 0; k < NbIteration; ++k)
     {
+        int rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+        if (rc != 0) {
+            // En vrai vous gérerez surtout EINTR (signal). Pour un test, on log juste.
+            // rc est un code d’erreur (pas errno).
+            fprintf(stderr, "clock_nanosleep error: %d\n", rc);
+        }
+
+        printf("tick\n");
+        next = add_ns(next, period_ns);
+
         // Début du cycle de 1 s (en temps CPU)
         clock_t t_cycle0 = clock();
 

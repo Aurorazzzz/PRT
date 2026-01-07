@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -O2 -Wall
 
-SRC = script_principal_step.c \
+SRC = script_principal_candence.c \
       sur_temperature.c \
       sur_tension.c \
 	  SOE.c \
@@ -17,7 +17,7 @@ SRC = script_principal_step.c \
 OUTDIR = output
 
 # Nom de l'exécutable final dans output/
-TARGET = $(OUTDIR)/script_principal_step.exe
+TARGET = $(OUTDIR)/script_principal_candence.exe
 
 all: $(TARGET)
 
