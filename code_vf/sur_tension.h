@@ -49,10 +49,7 @@ typedef struct {
 // Initialisation du contexte (paramètres + tables + état Ir)
 void TENSION_init(TENSION_Context *ctx);
 
-// Calcul "point par point"
-// - entrée : courant, SOC, tension_mesuree, etat (0=charge, 1=décharge)
-// - sortie : tension modèle U et alerte (0 ou 1)
-// Retour : U (tension modèle)
+// Calcul "point par point" : met à jour le contexte
 float TENSION_step(TENSION_Context *ctx,
                    float courant,
                    float SOC,

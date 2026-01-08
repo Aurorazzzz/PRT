@@ -42,8 +42,6 @@ typedef struct {
 void TEMP_init(TEMP_Context *ctx);
 
 // Calcul "point par point" : met à jour le contexte
-// - entrée : courant, temperature
-// - sortie : T2 (température modèle) et alerte (0 ou 1)
 float TEMP_step(TEMP_Context *ctx,
                 float courant,
                 float temperature,

@@ -38,19 +38,7 @@ typedef struct
 // ============================================================================
 void RUL_init(RUL_Context *ctx);
 
-// ============================================================================
-// Step RUL : un échantillon (SOH, SOC) → mise à jour + RUL corrigé
-//
-// Entrées :
-//   - ctx : contexte déjà initialisé
-//   - SOH : état de santé (0–1)
-//   - SOC : état de charge (0–1)
-//
-// Sortie :
-//   - valeur RUL corrigée = RUL_est / vitesse_degradation (protégée)
-//
-// Le contexte interne (matrices, covariances, RUL_est, etc.) est mis à jour.
-// ============================================================================
+// calcul "point par point" : met à jour le contexte
 float RUL_step(RUL_Context *ctx, float SOH, float SOC);
 
 #endif // RUL_THEO_H

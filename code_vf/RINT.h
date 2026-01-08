@@ -32,21 +32,7 @@ typedef struct
 // ============================================================================
 void RINT_init(RINT_Context *ctx);
 
-// ============================================================================
-// Step RINT : un échantillon → mise à jour + RINT, SOHR
-//
-// Entrées :
-//   - ctx     : contexte déjà initialisé
-//   - tension : tension mesurée (U)
-//   - courant : courant batterie (I) — vous pouvez passer I ou -I selon
-//               la convention que vous utilisez partout (à fixer côté appelant)
-//   - SOC     : état de charge (0–1)
-//
-// Sorties :
-//   - SOHR_out (optionnel) : si non NULL, on y écrit SOHR(t)
-// Retour :
-//   - RINT courant (résistance interne filtrée)
-// ============================================================================
+//calcul "point par point" : met à jour le contexte
 float RINT_step(RINT_Context *ctx,
                 float tension,
                 float courant,

@@ -33,9 +33,7 @@ typedef struct
 // Initialisation du contexte SOC (états LSTM + SOC + Pk)
 void SOC_init(SOC_Context *ctx);
 
-// Step SOC : 1 échantillon → 1 SOC mis à jour
-// Entrées : courant (A), tension (V), température (°C), SOH (0–1)
-// Retour : SOC estimé après correction Kalman
+// Calcul "point par point" : met à jour le contexte
 float SOC_step(SOC_Context *ctx,
                float courant,
                float tension,

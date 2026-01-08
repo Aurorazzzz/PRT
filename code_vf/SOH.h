@@ -37,13 +37,7 @@ typedef struct
 // ============================================================================
 void SOH_init(SOH_Context *ctx);
 
-// ============================================================================
-// Step SOH : un échantillon (courant, SOC) → mise à jour du contexte + SOH
-// - courant : courant batterie (même convention que votre MATLAB : on appliquera
-//             le signe à l’intérieur comme dans SOH_setup : -courant)
-// - SOC     : SOC instantané (0–1)
-// Retour    : SOH(t), valeur filtrée actuelle
-// ============================================================================
+// Calcul "point par point"
 float SOH_step(SOH_Context *ctx, float courant, float SOC);
 
 #endif // SOH_V1_H
