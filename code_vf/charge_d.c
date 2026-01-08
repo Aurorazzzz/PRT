@@ -22,19 +22,17 @@ void Charge_donnees (float **courant, float **tension, float **temperature, floa
     float **donnees[] = { courant, tension, temperature, SOH, SOC };
     int nFichiers = 5;
     
-    size_t N = 4841577; // nombre d'éléments dans ton fichier
+    size_t N = 4841577; // nombre d'éléments dans le fichier
 
     for(int k = 0; k < nFichiers; k++) {
         *donnees[k] = malloc(N * sizeof(float));
         if(*donnees[k] == NULL) {
             printf("Erreur allocation mémoire\n");
-            // ici, tu pourrais libérer ce qui a déjà été alloué
             return;
         }
     }
 
     for(int k = 0; k < nFichiers; k++) {
-    // Si besoin, tu peux construire un chemin complet
     char chemin[256];
     snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
     printf(chemin);

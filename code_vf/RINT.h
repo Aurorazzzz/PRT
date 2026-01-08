@@ -11,7 +11,7 @@ typedef struct
     float a_filtre[2];   // a1, a2
     float b_filtre[2];   // b1, b2
 
-    // États internes (mêmes significations que dans votre code initial)
+    // États internes
     double RINT;          // résistance interne filtrée courante
     float  RINT_INIT;     // valeur de RINT au début de la vieillesse (ou -1)
     double RINTkm1;       // R(k-1) non filtré

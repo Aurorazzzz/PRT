@@ -1,7 +1,7 @@
 #ifndef SOE_THEO_H
 #define SOE_THEO_H
 
-// Fonction pure (déjà existante)
+// Fonction 
 float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
                      const float *X_OCV, const float *LOI_INTEG_OCV_DECHARGE, int n);
 

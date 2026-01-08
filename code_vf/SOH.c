@@ -45,7 +45,7 @@ static bool detection_charge_decharge_core(SOH_Context *ctx,
     return changement_etat;
 }
 
-// Calcul du SOH (noyau de calcul) — traduction directe de calcul_SOH()
+// Calcul du SOH : met à jour ctx->SOH
 static void calcul_SOH_core(SOH_Context *ctx,
                             float courant,
                             bool  changement_etat,

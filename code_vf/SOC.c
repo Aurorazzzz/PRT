@@ -2,7 +2,7 @@
 #include "SOC.h"
 
 // ============================================================================
-// Constantes modèle SOC (identiques à votre code actuel)
+// Constantes modèle SOC 
 // ============================================================================
 
 static const float moins_eta_sur_Q = 0.00023003f;
@@ -10,8 +10,7 @@ static const float dt  = 1.0f;
 static const float Qk  = 0.000001f;
 static const float Rk  = 1.0f;
 
-// ---- Recopiez ici VOS TABLEAUX EXACTS (Wi, Wf, Wo, Wg, Ri, Rf, Ro, Rg, bi, bf, bo, bg, WFC, bFC, MOY, ECART_TYPE) ----
-// Exemple de forme (gardez le contenu tel quel) :
+// ----  TABLEAUX (Wi, Wf, Wo, Wg, Ri, Rf, Ro, Rg, bi, bf, bo, bg, WFC, bFC, MOY, ECART_TYPE) ----
 //
 const float Wi[] = {
 -0.0013864826, -0.0062211026, 0.028899601,
@@ -298,7 +297,7 @@ const float ECART_TYPE[] = {
 // ------------------------------------------------------------------------------------------------
 
 
-// États initiaux ht / ct (recopiez vos tableaux initiaux ht[] et ct[])
+// États initiaux ht / ct 
 static const float HT_INIT[SOC_TAILLE_RESEAU] = {
     0.3798397f,
     0.3062328f,
@@ -494,7 +493,6 @@ float SOC_step(SOC_Context *ctx,
 {
     if (!ctx) return 0.0f;
 
-    // Rappel : dans votre code, estimationSOC était appelée avec -courant[z]
     float I = -courant;
 
     // 1) Prediction SOC par comptage coulombimétrique

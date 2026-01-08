@@ -48,7 +48,7 @@ static void estimation_RUL_core(RUL_Context *ctx, float SOH, float delta_SOC)
 {
     if (!ctx) return;
 
-    /* 1) Accumulateur de demi-cycles (comme dans votre version) */
+    /* 1) Accumulateur de demi-cycles */
     if (ctx->dt > 0.0f) {
         ctx->integrale_SOC += f_absf(delta_SOC) / ctx->dt;
     }

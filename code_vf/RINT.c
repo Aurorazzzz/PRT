@@ -4,7 +4,7 @@
 static inline float f_absf(float x) { return (x < 0.0f) ? -x : x; }
 
 // ============================================================================
-// Noyau de calcul : traduction de votre estimation_RINT_step()
+// Noyau de calcul : traduction de estimation_RINT_step()
 // ============================================================================
 
 static void estimation_RINT_step_core(float tension,
@@ -62,7 +62,6 @@ static void estimation_RINT_step_core(float tension,
         }
     }
 
-    // RINT_ref n'est pas utilisé dans le MATLAB fourni : on le laisse inchangé
     (void)ctx->RINT_ref;
 
     // --- MàJ des mémoires ---
@@ -78,15 +77,15 @@ void RINT_init(RINT_Context *ctx)
 {
     if (!ctx) return;
 
-    // Coefficients du filtre IIR d'ordre 1 (vos valeurs d’origine)
+    // Coefficients du filtre IIR d'ordre 1
     ctx->a_filtre[0] = 1.0f;
     ctx->a_filtre[1] = -0.999968584566934f;
 
     ctx->b_filtre[0] = 0.00001570771653f;
     ctx->b_filtre[1] = 0.00001570771650f;
 
-    // États internes (initialisation alignée sur votre code initial)
-    ctx->RINT          = 0.018;    // double
+    // États internes
+    ctx->RINT          = 0.018; //double
     ctx->RINT_INIT     = -1.0f;
     ctx->RINTkm1       = 0.018;
     ctx->RINTfiltrekm1 = 0.018;
@@ -110,11 +109,7 @@ float RINT_step(RINT_Context *ctx,
                 float *SOHR_out)
 {
     if (!ctx) return 0.0f;
-
-    // Ici, à vous de décider si vous passez I ou -I à la fonction.
-    // Dans votre code initial, vous appeliez estimation_RINT_step(U, -I, SOC, ...).
-    // Si vous voulez garder EXACTEMENT la même convention :
-    float courant_effectif = courant; // ou -courant si nécessaire côté appelant
+    float courant_effectif = courant;
 
     estimation_RINT_step_core(tension, courant_effectif, SOC, ctx);
 

@@ -6,20 +6,18 @@ void Charge_donnees (const float **courant,const float **tension, const float **
     const float **donnees[] = {courant, tension, temperature, SOH, SOC };
     int nFichiers = 5;
     
-    size_t N = 4841577; // nombre d'éléments dans ton fichier
+    size_t N = 4841577; // nombre d'éléments dans le fichier
 
     for(int k = 0; k < nFichiers; k++) {
-        //on modifie l'adresse vers laquel pointe le pointeur (dereferencement donnees)
+        //on modifie l'adresse vers laquel pointe le pointeur (dereferencement des donnees)
         *donnees[k] = malloc(N * sizeof(float));
         if(*donnees[k] == NULL) {
             printf("Erreur allocation mémoire\n");
-            // ici, tu pourrais libérer ce qui a déjà été alloué
             return;
         }
     }
 
     for(int k = 0; k < nFichiers; k++) {
-    // Si besoin, tu peux construire un chemin complet
     char chemin[256];
     //snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
     snprintf(chemin, sizeof(chemin), "donnees/%s", fichiers[k]);
@@ -30,7 +28,7 @@ void Charge_donnees (const float **courant,const float **tension, const float **
     fp = fopen(chemin, "rb"); // rb = read binary
     if(fp == NULL) {
         printf("Erreur ouverture fichier !\n");
-        // Donner contient les adresses des pointeurs, je veux modifier l'adresse pointer par le pointeur, donc dereferencement
+        // Donnees contient les adresses des pointeurs, je veux modifier l'adresse pointer par le pointeur, donc dereferencement
         free(*donnees[k]);
         return;
     }

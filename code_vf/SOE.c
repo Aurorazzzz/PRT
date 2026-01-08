@@ -4,7 +4,7 @@
 #include "Read_Write.h"
 
 // ============================================================================
-// Fonction principale : estimation du SOE (fonction pure, point par point)
+// Fonction principale : estimation du SOE (fonction point par point)
 // ============================================================================
 float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
                      const float *X_OCV, const float *LOI_INTEG_OCV_DECHARGE, int n)
