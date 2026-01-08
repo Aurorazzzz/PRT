@@ -1,5 +1,6 @@
 CC = gcc
 CFLAGS = -O2 -Wall
+LDLIBS += -lm
 
 SRC = script_principal_candence.c \
       sur_temperature.c \
@@ -23,7 +24,7 @@ all: $(TARGET)
 
 
 $(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(SRC) -o $(TARGET)
+	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LDLIBS)
 
 clean:
 	rm -f $(TARGET)
