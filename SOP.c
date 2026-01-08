@@ -215,12 +215,12 @@ static float modele_tension_1RC_step(float        I,
     float OCV, der_dummy;
     interp1rapide_der(X_OCV_dep, Y_tab, n_OCV, SOC, &OCV, &der_dummy);
     //OCV = 0;
-    printf("OCV=%f\n", OCV);
+    //printf("OCV=%f\n", OCV);
     //printf("der=%f\n", der_dummy);
     
     // Tension
     float U = OCV - R1 * (*Ir) - R0 * I;
-    // printf("Ir=%f\n", *Ir);
+    //printf("Ir=%f\n", *Ir);
     // printf("I=%f\n", I);
     return U;
 }
@@ -902,6 +902,8 @@ void SOP_predictif(
         /* 2) Limitation PREDICTIVE (appel à la racine SOP)                   */
         /* ================================================================== */
 
+        printf("SOH %f/n", SOH[i]);
+
         float courant_final = recherche_racine_SOP_Pegase_1RC(
             moins_eta_sur_Q, dt, horizon,
             SOC_actuel[i], SOH[i],
@@ -916,7 +918,7 @@ void SOP_predictif(
             -courant[i], residus              /* courant_requete */
         );
 
-        //printf("courant_final=%f\n", courant_final);
+        printf("courant_final=%f\n", courant_final);
         printf("boucle=%zu\n", i);
         courant_predi[i] = courant_final;
         //printf("courant_predi %f\n", courant_predi[i]);
@@ -964,6 +966,8 @@ void SOP_predictif(
         float der_erreur_Umax =
             -(tension_actuelle[i - 1] - tension_actuelle[i - 2]) / dt;
 
+        printf("erreur Umax%f\n",tension_actuelle[i - 1]);
+        printf("der erreur Umax%f\n",tension_actuelle[i - 2]);
         /* correcteur PI sur delta_I */
         delta_I_Umax[i] =
             Ki_Umax * erreur_Umax + Kp_Umax * der_erreur_Umax;
@@ -1087,6 +1091,9 @@ void SOP_predictif(
             delta_I_candidat = delta_I_consigne;
         }
 
+        printf("delta_I_cand%f\n", delta_I_candidat);
+        printf("delta I max %f\n", delta_I_Umax[i]);
+
         /* Umax */
         if (delta_I_candidat < delta_I_Umax[i]) {
             //printf("6.0");
@@ -1141,7 +1148,7 @@ void SOP_predictif(
         indicateur_boucle[i] = indicateur;
 
         /* Calcul du courant final autorisé */
-        //printf("delta_I_fin=%f\n", delta_I_candidat);
+        printf("inidc =%f\n",indicateur);
         //printf("courant i moins un=%f\n", courant_candidat[i - 1]);
         courant_candidat[i] = courant_candidat[i - 1] + dt * delta_I_candidat;
         //printf("I_cand=%f\n", courant_candidat[i]);  
@@ -1161,7 +1168,9 @@ void SOP_predictif(
         float U_sys  = 0.0f;
 
         for (int k = 0; k < 1; ++k)
-        {
+        {   
+            printf("SOC_avant %f\n", SOC);
+            printf("courant_SOC %f\n", courant_SOC);
             /* 1) Avancer le SOC avec courant_SOC */
             SOC = modele_SOC_CC_step(moins_eta_sur_Q,
                                     dt,
@@ -1180,6 +1189,9 @@ void SOP_predictif(
 
 
             printf("courant_tension %f\n", courant_tension);
+            printf("SOC %f\n", SOC);
+            printf("etat %f\n", etat[i]);
+            printf("n_OCV %f\n", n_OCV);
             /* 3) Avancer la tension “système” avec courant_tension et Ir_sys local */
             U_sys = modele_tension_1RC_step(courant_tension,
                                             SOC,
@@ -1224,6 +1236,10 @@ void SOP_predictif(
 
     }
 
+printf("SOC 0 %f\n", SOC_actuel[0]);
+printf("SOC 1 %f\n", SOC_actuel[1]);
+printf("SOC 2 %f\n", SOC_actuel[2]);
+printf("SOC 3 %f\n", SOC_actuel[3]);
 
 //printf("etat %d\n", etat[9998]);
 Ecriture_result(courant_candidat, N, "courant_resultat_PC_result");
@@ -1270,7 +1286,7 @@ void setup_SOP(void)
     const float *SOH = NULL;
     const float *SOC = NULL;
 
-    const int NbIteration = 975;
+    const int NbIteration = 2346;
 
     float *SOP_charge   = (float*)malloc(NbIteration * sizeof(float));
     float *SOP_decharge = (float*)malloc(NbIteration * sizeof(float));

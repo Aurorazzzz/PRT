@@ -21,8 +21,8 @@ void Charge_donnees (const float **courant,const float **tension, const float **
     for(int k = 0; k < nFichiers; k++) {
     // Si besoin, tu peux construire un chemin complet
     char chemin[256];
-    //snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
-    snprintf(chemin, sizeof(chemin), "donnees/%s", fichiers[k]);
+    snprintf(chemin, sizeof(chemin), "../donnees/%s", fichiers[k]); // dossier "donnees"
+    //snprintf(chemin, sizeof(chemin), "donnees/%s", fichiers[k]);
     //printf(chemin);
     
     FILE *fp;

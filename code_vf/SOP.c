@@ -1,6 +1,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "SOP.h"
 
 static const float X_OCV_global[] = {
@@ -103,7 +104,8 @@ static float modele_tension_1RC_step(float I, float SOC, float *Ir,
 
     float OCV, der_dummy;
     interp1rapide_der(X_OCV, Y_tab, n_OCV, SOC, &OCV, &der_dummy);
-
+    //printf("OCV=%f\n", OCV);
+    //printf("Ir=%f\n", *Ir);
     return OCV - R1 * (*Ir) - R0 * I;
 }
 
@@ -387,6 +389,7 @@ void SOP_init(SOP_Context *ctx,
 
     ctx->U_km2  = U0;
     ctx->U_km1  = U0;
+    ctx->U = U0;
     ctx->T2_km1 = T20;
 
     ctx->I_candidat = 0.0f;
@@ -414,16 +417,21 @@ float SOP_step(SOP_Context *ctx,
                float I_consigne,
                float *SOP_charge_W,
                float *SOP_decharge_W,
-               int   *etat_out)
+               int   *etat_out,
+               float SOH_mes)
 {
     if (!ctx) return 0.0f;
 
+
+    ctx->SOH = SOH_mes;
     // 1) détection charge/décharge sur la consigne
     detection_phase_step(ctx, I_consigne);
     if (etat_out) *etat_out = ctx->etat;
 
     // 2) limitation prédictive (Pegase) -> courant_resultat
     float residus[3] = {0,0,0};
+
+    printf("SOH %f/n", ctx->SOH);
 
     float I_predictif = recherche_racine_SOP_Pegase_1RC_step(
         ctx->moins_eta_sur_Q, ctx->dt, ctx->horizon,
@@ -443,6 +451,7 @@ float SOP_step(SOP_Context *ctx,
         residus
     );
 
+    printf("courant_final=%f\n", I_predictif);
     // sécurité : ne pas dépasser la consigne
     if (I_consigne > 0.0f) {
         if (I_predictif > I_consigne) I_predictif = I_consigne;
@@ -462,7 +471,10 @@ float SOP_step(SOP_Context *ctx,
     // Umax
     {
         float erreur_Umax = ctx->U_max - ctx->U_km1;
+        printf("erreur Umax%f\n",ctx->U_km1);
+
         float der_erreur_Umax = -(ctx->U_km1 - ctx->U_km2) / ctx->dt;
+        printf("der erreur Umax%f\n",ctx->U_km2);
         delta_I_Umax = ctx->Ki_Umax * erreur_Umax + ctx->Kp_Umax * der_erreur_Umax;
         float max_delta_for_zero = -ctx->I_candidat;
         if (delta_I_Umax > max_delta_for_zero) delta_I_Umax = max_delta_for_zero;
@@ -528,22 +540,71 @@ float SOP_step(SOP_Context *ctx,
     float delta_I_consigne = I_predictif - ctx->I_candidat;
     float delta_I_candidat = delta_I_consigne;
 
-    if (delta_I_consigne < delta_I_SOCmax) delta_I_candidat = delta_I_SOCmax;
-    if (delta_I_candidat < delta_I_Umax)   delta_I_candidat = delta_I_Umax;
-    if (delta_I_candidat < delta_I_Tmax_charge) delta_I_candidat = delta_I_Tmax_charge;
+    int indicateur_limite = 0;
 
-    if (delta_I_candidat > delta_I_SOCmin) delta_I_candidat = delta_I_SOCmin;
-    if (delta_I_candidat > delta_I_Umin)   delta_I_candidat = delta_I_Umin;
-    if (delta_I_candidat > delta_I_Tmax_decharge) delta_I_candidat = delta_I_Tmax_decharge;
+/* ---------- consigne vs SOCmax ---------- */
+if (delta_I_consigne < delta_I_SOCmax) {
+    delta_I_candidat = delta_I_SOCmax;
+    indicateur_limite = 1;
+}
 
-    if (delta_I_candidat > delta_I_Imax) delta_I_candidat = delta_I_Imax;
-    if (delta_I_candidat < delta_I_Imin) delta_I_candidat = delta_I_Imin;
+/* ---------- Umax ---------- */
+printf("delta_I_cand%f\n", delta_I_candidat);
+printf("delta I max %f\n", delta_I_Umax);
+if (delta_I_candidat < delta_I_Umax) {
+    delta_I_candidat = delta_I_Umax;
+    indicateur_limite = 2;
+}
+
+/* ---------- Tmax charge ---------- */
+if (delta_I_candidat < delta_I_Tmax_charge) {
+    delta_I_candidat = delta_I_Tmax_charge;
+    indicateur_limite = 3;
+}
+
+/* ---------- SOCmin ---------- */
+if (delta_I_candidat > delta_I_SOCmin) {
+    delta_I_candidat = delta_I_SOCmin;
+    indicateur_limite = 4;
+}
+
+/* ---------- Umin ---------- */
+if (delta_I_candidat > delta_I_Umin) {
+    delta_I_candidat = delta_I_Umin;
+    indicateur_limite = 5;
+}
+
+/* ---------- Tmax décharge ---------- */
+if (delta_I_candidat > delta_I_Tmax_decharge) {
+    delta_I_candidat = delta_I_Tmax_decharge;
+    indicateur_limite = 6;
+}
+
+/* ---------- Imax ---------- */
+if (delta_I_candidat > delta_I_Imax) {
+    delta_I_candidat = delta_I_Imax;
+    indicateur_limite = 7;
+}
+
+/* ---------- Imin ---------- */
+if (delta_I_candidat < delta_I_Imin) {
+    delta_I_candidat = delta_I_Imin;
+    indicateur_limite = 8;
+}
+
+/* ---------- debug ---------- */
+if (indicateur_limite != 0) {
+    printf("Limitation active : %d\n", indicateur_limite);
+}
+
 
     // 6) mise à jour courant candidat appliqué
     ctx->I_candidat = ctx->I_candidat + ctx->dt * delta_I_candidat;
 
     // 7) “plante” le système d’un pas avec I_candidat (mise à jour SOC, T, U, Ir)
     {
+        printf("SOC_avant %f\n", ctx->SOC);
+        printf("courant_SOC %f\n", ctx->I_candidat);
         float SOC_new = modele_SOC_CC_step(ctx->moins_eta_sur_Q, ctx->dt, ctx->SOC, ctx->I_candidat, ctx->SOH);
 
         float T1_new = ctx->T1;
@@ -551,6 +612,10 @@ float SOP_step(SOP_Context *ctx,
         modele_thermique_foster_ordre_2_step(ctx->therm, ctx->I_candidat, ctx->dt, ctx->TAMB, &T1_new, &T2_new);
 
         float Ir_new = ctx->Ir;
+        printf("courant tension %f\n", ctx->I_candidat);
+        printf("SOC %f\n", SOC_new);
+        printf("etat %f\n", ctx->etat);
+        printf("nOCV %f\n", ctx->n_OCV);
         float U_new  = modele_tension_1RC_step(ctx->I_candidat, SOC_new, &Ir_new,
                                                ctx->etat,
                                                ctx->X_OCV, ctx->Y_OCV_charge, ctx->Y_OCV_decharge, ctx->n_OCV,
@@ -558,8 +623,8 @@ float SOP_step(SOP_Context *ctx,
 
         // mémoires dérivées
         ctx->U_km2 = ctx->U_km1;
-        ctx->U_km1 = U_new;
-
+        ctx->U_km1 = ctx->U;
+        ctx->U = U_new;
         ctx->T2_km1 = ctx->T2;
 
         // états
@@ -567,6 +632,8 @@ float SOP_step(SOP_Context *ctx,
         ctx->T1  = T1_new;
         ctx->T2  = T2_new;
         ctx->Ir  = Ir_new;
+
+        printf("tension actuelle i + 1 %f\n", U_new);
     }
 
     // courant réellement appliqué

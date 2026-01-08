@@ -10,8 +10,8 @@ SRC = script_principal_candence.c \
 	  RUL.c \
 	  RINT.c \
 	  Read_Write.c \
-	  SOC.c
-	  #SOP_Theo.c 
+	  SOC.c \
+	  SOP.c 
       
 
 # Chemin de sortie

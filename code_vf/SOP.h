@@ -41,6 +41,7 @@ typedef struct
     float T2;
     float Ir;
 
+    float U;
     float U_km1;
     float U_km2;
     float T2_km1;
@@ -80,7 +81,7 @@ float SOP_step(SOP_Context *ctx,
                float I_consigne,
                float *SOP_charge_W,
                float *SOP_decharge_W,
-               int   *etat_out);
+               int   *etat_out, float SOH);
 
 #ifdef __cplusplus
 }

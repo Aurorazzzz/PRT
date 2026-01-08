@@ -43,7 +43,7 @@ int main(void)
     const float *SOH_vec     = NULL;
     const float *SOC_vec     = NULL;
 
-    const int   NbIteration  = 1000000;   // 1 000 000 pas de 1 s
+    const int   NbIteration  = 10000;   // 1 000 000 pas de 1 s
     const float periode_s    = 1.0f;      // cadence logique : 1 seconde
 
     Charge_donnees(&courant, &tension, &temperature, &SOH_vec, &SOC_vec);
@@ -91,7 +91,6 @@ int main(void)
 
     float *vect_SOP            = (float*)malloc(NbIteration * sizeof(float));
     float *vect_tension_SOP    = (float*)malloc(NbIteration * sizeof(float));
-    float *vect_courant_SOP    = (float*)malloc(NbIteration * sizeof(float));
     float *vect_temp_SOP    = (float*)malloc(NbIteration * sizeof(float));
     float *vect_SOC_SOP    = (float*)malloc(NbIteration * sizeof(float));
 
@@ -103,7 +102,7 @@ int main(void)
         !vect_U_tension || !vect_alerte_tension ||
         !vect_SOE || !vect_SOH || !vect_RUL || !vect_RINT ||
         !vect_temps_cycle || !vect_SOC || !vect_SOP || !vect_tension_SOP ||
-        !vect_courant_SOP || !vect_temp_SOP || !vect_SOC_SOP)
+         !vect_temp_SOP || !vect_SOC_SOP)
     {
         perror("Erreur allocation vecteurs resultat");
         free(vect_T2_temp);
@@ -118,7 +117,6 @@ int main(void)
         free(vect_SOC);
         free(vect_SOP);
         free(vect_tension_SOP);
-        free(vect_courant_SOP);
         free(vect_temp_SOP);
         free(vect_SOC_SOP);
         Free_donnees(courant, tension, temperature, SOH_vec, SOC_vec);
@@ -144,7 +142,14 @@ int main(void)
     RUL_init(&rul_ctx);
     RINT_init(&rint_ctx);
     SOC_init(&soc_ctx);
-    SOP_init(&sop_ctx, SOC_vect[0], SOH_vec[0], 60, temperature[0], courant[0], tension[0]);
+    SOP_init(&sop_ctx, SOC_vec[0], SOH_vec[0], 60, temperature[0], 0, tension[0]);
+    for (size_t i = 0; i < 3; ++i){
+        vect_SOP[i]=courant[0];
+        vect_tension_SOP[i]=tension[0];
+        vect_temp_SOP[i]=temperature[0];
+        vect_SOC_SOP[i]=SOC_vec[0];
+    }
+    
 
     printf("========= Execution des modules (step) dans UNE boucle cadencee a 1 s =========\n");
 
@@ -180,6 +185,7 @@ int main(void)
         }
 
         printf("tick\n");
+        printf("boucle%d\n", k);
         next = add_ns(next, period_ns);
 
         // Début du cycle de 1 s (en temps CPU)
@@ -330,14 +336,14 @@ int main(void)
         // g) Module SOP 
         // -----------------------------------------------------------------
  
-
+        if (k > 1 && k < NbIteration) 
         {
             float sop_ch, sop_dech;
             int etat;
 
             clock_t t0 = clock();
 
-            float I_lim = SOP_step(&sop_ctx, I_mes, &sop_ch, &sop_dech, &etat);
+            float I_lim = SOP_step(&sop_ctx, -I_mes, &sop_ch, &sop_dech, &etat, SOH_k);
 
             clock_t t1 = clock();
 
@@ -345,9 +351,9 @@ int main(void)
             temps_SOP += temp_SOP_last;
             if (temp_SOP_last > temp_SOP_max) temp_SOP_max = temp_SOP_last;
 
-            vect_SOC_SOP[k]    = sop_ctx.SOC;
-            vect_tension_SOP[k]      = sop_ctx.U_km1;
-            vect_temp_SOP[k]      = sop_ctx.T2;
+            vect_SOC_SOP[k+1]    = sop_ctx.SOC;
+            vect_tension_SOP[k+1]      = sop_ctx.U;
+            vect_temp_SOP[k+1]      = sop_ctx.T2;
 
             vect_SOP[k] = I_lim;
 
@@ -364,6 +370,11 @@ int main(void)
         // On mémorise le temps CPU utilisé pour ce pas de 1 s
         vect_temps_cycle[k] = (float)duree_cycle;
     }
+
+    printf("SOC 0 %f\n", vect_SOC_SOP[0]);
+    printf("SOC 1 %f\n", vect_SOC_SOP[1]);
+    printf("SOC 2 %f\n", vect_SOC_SOP[2]);
+    printf("SOC 3 %f\n", vect_SOC_SOP[3]);
 
     // =====================================================================
     // 6) Bilan des temps CPU
