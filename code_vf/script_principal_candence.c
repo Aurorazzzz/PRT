@@ -11,6 +11,7 @@
 #include "RUL.h"
 #include "RINT.h"
 #include "SOC.h"
+#include "SOP.h"
 #include "script_principal_candence.h"
 
 static double duree_en_seconde(clock_t t0, clock_t t1)
@@ -55,6 +56,7 @@ int main(void)
     double temp_RUL_max     = 0.0;
     double temp_RINT_max    = 0.0;
     double temp_SOC_max     = 0.0;
+    double temp_SOP_max     = 0.0;
 
     // Dernière durée mesurée (pour la moyenne on ne garde que le cumul)
     double temp_TEMP_last   = 0.0;
@@ -64,6 +66,7 @@ int main(void)
     double temp_RUL_last    = 0.0;
     double temp_RINT_last   = 0.0;
     double temp_SOC_last    = 0.0;
+    double temp_SOP_last     = 0.0;
 
     // Constantes pour le cadencement
 
@@ -86,13 +89,21 @@ int main(void)
     float *vect_RINT           = (float*)malloc(NbIteration * sizeof(float));
     float *vect_SOC            = (float*)malloc(NbIteration * sizeof(float));
 
+    float *vect_SOP            = (float*)malloc(NbIteration * sizeof(float));
+    float *vect_tension_SOP    = (float*)malloc(NbIteration * sizeof(float));
+    float *vect_courant_SOP    = (float*)malloc(NbIteration * sizeof(float));
+    float *vect_temp_SOP    = (float*)malloc(NbIteration * sizeof(float));
+    float *vect_SOC_SOP    = (float*)malloc(NbIteration * sizeof(float));
+
+
     // Pour information sur le temps d'exécution de chaque pas de 1 s
     float *vect_temps_cycle    = (float*)malloc(NbIteration * sizeof(float));
 
     if (!vect_T2_temp || !vect_alerte_temp ||
         !vect_U_tension || !vect_alerte_tension ||
         !vect_SOE || !vect_SOH || !vect_RUL || !vect_RINT ||
-        !vect_temps_cycle || !vect_SOC)
+        !vect_temps_cycle || !vect_SOC || !vect_SOP || !vect_tension_SOP ||
+        !vect_courant_SOP || !vect_temp_SOP || !vect_SOC_SOP)
     {
         perror("Erreur allocation vecteurs resultat");
         free(vect_T2_temp);
@@ -105,6 +116,11 @@ int main(void)
         free(vect_RINT);
         free(vect_temps_cycle);
         free(vect_SOC);
+        free(vect_SOP);
+        free(vect_tension_SOP);
+        free(vect_courant_SOP);
+        free(vect_temp_SOP);
+        free(vect_SOC_SOP);
         Free_donnees(courant, tension, temperature, SOH_vec, SOC_vec);
         return 1;
     }
@@ -119,6 +135,7 @@ int main(void)
     RUL_Context rul_ctx;
     RINT_Context rint_ctx;
     SOC_Context soc_ctx;
+    SOP_Context sop_ctx;
 
     TEMP_init(&temp_ctx);
     TENSION_init(&tens_ctx);
@@ -127,6 +144,7 @@ int main(void)
     RUL_init(&rul_ctx);
     RINT_init(&rint_ctx);
     SOC_init(&soc_ctx);
+    SOP_init(&sop_ctx, SOC_vect[0], SOH_vec[0], 60, temperature[0], courant[0], tension[0]);
 
     printf("========= Execution des modules (step) dans UNE boucle cadencee a 1 s =========\n");
 
@@ -140,6 +158,7 @@ int main(void)
     double temps_RUL         = 0.0;
     double temps_RINT        = 0.0;
     double temps_SOC         = 0.0;
+    double temps_SOP         = 0.0;
 
     double temps_cycle_total = 0.0;
     double temps_cycle_max   = 0.0;
@@ -308,6 +327,33 @@ int main(void)
         }
 
         // -----------------------------------------------------------------
+        // g) Module SOP 
+        // -----------------------------------------------------------------
+ 
+
+        {
+            float sop_ch, sop_dech;
+            int etat;
+
+            clock_t t0 = clock();
+
+            float I_lim = SOP_step(&sop_ctx, I_mes, &sop_ch, &sop_dech, &etat);
+
+            clock_t t1 = clock();
+
+            temp_SOP_last = duree_en_seconde(t0, t1);
+            temps_SOP += temp_SOP_last;
+            if (temp_SOP_last > temp_SOP_max) temp_SOP_max = temp_SOP_last;
+
+            vect_SOC_SOP[k]    = sop_ctx.SOC;
+            vect_tension_SOP[k]      = sop_ctx.U_km1;
+            vect_temp_SOP[k]      = sop_ctx.T2;
+
+            vect_SOP[k] = I_lim;
+
+        }
+
+        // -----------------------------------------------------------------
         // Fin du cycle de 1 s (en temps CPU)
         // -----------------------------------------------------------------
         clock_t t_cycle1 = clock();
@@ -372,6 +418,12 @@ int main(void)
            (temps_SOC / NbIteration) * 1e6,
            temp_SOC_max * 1e6);
 
+    printf("%-12s | %12.6f | %12.2f | %12.2f\n",
+           "SOP",
+           temps_SOP,
+           (temps_SOP / NbIteration) * 1e6,
+           temp_SOP_max * 1e6);
+
     printf("---------------------------------------------------------------------\n");
     printf("Cycle 1 s : cumul = %10.6f s | moyen = %10.9f s | max = %10.9f s\n",
            temps_cycle_total, temps_moyen_cycle, temps_cycle_max);
@@ -390,6 +442,10 @@ int main(void)
     Ecriture_result(vect_RUL,            NbIteration, "RUL_vscode");
     Ecriture_result(vect_RINT,           NbIteration, "RINT_vscode");
     Ecriture_result(vect_SOC,            NbIteration, "SOC_vscode");
+    Ecriture_result(vect_SOP,            NbIteration, "SOP_vscode");
+    Ecriture_result(vect_temp_SOP,       NbIteration, "SOP_TEMP_vscode");
+    Ecriture_result(vect_tension_SOP,    NbIteration, "SOP_TENSION_vscode");
+    Ecriture_result(vect_SOC_SOP,        NbIteration, "SOP_SOC_vscode");
     Ecriture_result(vect_temps_cycle,    NbIteration, "TEMPS_CYCLE_CPU");
 
     // =====================================================================
@@ -407,6 +463,10 @@ int main(void)
     free(vect_RINT);
     free(vect_SOC);
     free(vect_temps_cycle);
+    free(vect_SOP);
+    free(vect_tension_SOP);
+    free(vect_temp_SOP);
+    free(vect_SOC_SOP);
 
     return 0;
 }
