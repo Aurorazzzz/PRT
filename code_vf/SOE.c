@@ -4,6 +4,51 @@
 #include "Read_Write.h"
 
 // ============================================================================
+// Module SOE — Estimation cadencée de l’état d’énergie
+// Projet : SBOVA – Fonction BMS (TRL3)
+//
+// Description :
+//   Ce module implémente l’estimation en ligne de l’état d’énergie (SOE)
+//   de la batterie. Le SOE représente l’énergie disponible normalisée,
+//   calculée à partir du SOC, de la tension batterie et d’un modèle
+//   énergétique simplifié.
+//
+//   L’algorithme est conçu pour un appel cadencé (typiquement 1 Hz) et
+//   fournit une information directement exploitable pour la gestion
+//   énergétique et le calcul des limites de puissance.
+//
+// Entrées (par appel) :
+//   - ctx     : contexte SOE déjà initialisé (SOE_Context)
+//   - SOC     : état de charge normalisé [0–1]
+//   - tension : tension batterie mesurée [V]
+//
+// Sorties :
+//   - Valeur de retour :
+//       SOE courant normalisé [0–1]
+//
+// Rôle dans l’architecture BMS :
+//   - Complète l’information SOC par une grandeur énergétique
+//   - Sert d’entrée au calcul des limites de puissance (SOP)
+//   - Permet une estimation plus réaliste de l’autonomie restante
+//
+// Hypothèses et remarques :
+//   - Appel cadencé avec période constante
+//   - Capacité énergétique nominale supposée connue dans le contexte
+//   - Saturation du SOE dans l’intervalle [0–1]
+//   - Aucun appel à l’allocation dynamique
+//
+// Auteur :
+//   Projet SBOVA – INSA Strasbourg / ICube
+//
+// Date de création :
+//   2026-01-08
+//
+// Dernière modification :
+//   2026-01-08
+// ============================================================================
+
+
+// ============================================================================
 // Fonction principale : estimation du SOE (fonction point par point)
 // ============================================================================
 float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,

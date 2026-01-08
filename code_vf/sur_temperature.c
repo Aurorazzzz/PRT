@@ -3,6 +3,51 @@
 #include "sur_temperature.h"
 
 // ============================================================================
+// Module SUR_TEMPERATURE — Surveillance cadencée de la température batterie
+// Projet : SBOVA – Fonction BMS (TRL3)
+//
+// Description :
+//   Ce module assure la surveillance en ligne de la température de la
+//   batterie. Il compare la température mesurée à des seuils configurables
+//   afin de détecter des conditions de sur-température ou de sous-température.
+//
+//   L’algorithme est conçu pour un appel cadencé (typiquement 1 Hz) et
+//   intègre des mécanismes d’hystérésis et de temporisation afin d’éviter
+//   les déclenchements intempestifs.
+//
+// Entrées (par appel) :
+//   - ctx         : contexte de surveillance thermique déjà initialisé
+//                   (SUR_TEMPERATURE_Context)
+//   - temperature : température batterie mesurée [°C]
+//
+// Sorties :
+//   - Valeur de retour :
+//       état thermique courant (OK / ALERTE / DÉFAUT selon implémentation)
+//   - Flags internes dans le contexte utilisables par le superviseur BMS
+//
+// Rôle dans l’architecture BMS :
+//   - Protection de la batterie contre les conditions thermiques critiques
+//   - Entrée de sécurité pour la limitation de puissance (SOP)
+//   - Condition d’inhibition pour certains estimateurs (SOC, RINT, SOH)
+//
+// Hypothèses et remarques :
+//   - Appel strictement cadencé avec période constante
+//   - Seuils thermiques définis et initialisés dans le contexte
+//   - Aucun appel à l’allocation dynamique mémoire
+//   - Comportement déterministe adapté à l’embarqué temps réel
+//
+// Auteur :
+//   Projet SBOVA – INSA Strasbourg / ICube
+//
+// Date de création :
+//   2026-01-08
+//
+// Dernière modification :
+//   2026-01-08
+// ============================================================================
+
+
+// ============================================================================
 // Fonction principale : surveillance température (équivalent MATLAB)
 //
 // Cette fonction est "step" : elle traite UN échantillon (courant, température)

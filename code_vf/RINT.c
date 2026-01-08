@@ -1,5 +1,57 @@
 #include "RINT.h"
 
+// ============================================================================
+// Module RINT — Estimation cadencée de la résistance interne
+// Projet : SBOVA – Fonction BMS (TRL3)
+//
+// Description :
+//   Ce module implémente une estimation en ligne de la résistance interne
+//   de la batterie (RINT) à partir des variations de tension et de courant.
+//   L’algorithme est conçu pour un appel cadencé (typiquement 1 Hz).
+//
+//   La résistance interne brute est estimée par la loi d’Ohm différentielle
+//   (R = -ΔU / ΔI), puis filtrée par un filtre IIR du premier ordre afin de
+//   garantir une évolution lente et robuste vis-à-vis du bruit.
+//   Un indicateur de santé associé à la résistance (SOHR) est également calculé.
+//
+// Entrées (par appel) :
+//   - ctx     : contexte RINT déjà initialisé (RINT_Context)
+//   - tension : tension mesurée de la batterie [V]
+//   - courant : courant batterie [A]
+//               Convention : identique à celle utilisée dans le reste du BMS
+//               (charge ou décharge à fixer côté appelant)
+//   - SOC     : état de charge normalisé [0–1]
+//
+// Sorties :
+//   - SOHR_out (optionnel) : si non NULL, reçoit l’indicateur SOHR(t)
+//                            (1 = état de référence)
+//
+// Valeur de retour :
+//   - Résistance interne courante RINT(t) [ohm], filtrée
+//
+// Conditions d’activation / inhibition :
+//   - Estimation inhibée si :
+//       • |ΔI| < seuil minimal
+//       • SOC < 20 % ou SOC > 80 %
+//   - En cas d’inhibition, la valeur précédente de RINT est conservée
+//
+// Remarques :
+//   - Le calcul de SOHR est activé après une phase d’initialisation longue
+//     (temps de convergence du filtre).
+//   - Le module ne dépend d’aucune allocation dynamique.
+//   - Conçu pour un usage embarqué temps réel.
+//
+// Auteur :
+//   Projet SBOVA – INSA Strasbourg / ICube
+//
+// Date de création :
+//   2026-01-08
+//
+// Dernière modification :
+//   2026-01-08
+// ============================================================================
+
+
 // Garde-fou abs(float) sans <math.h>
 static inline float f_absf(float x) { return (x < 0.0f) ? -x : x; }
 

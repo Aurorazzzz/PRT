@@ -2,6 +2,56 @@
 #include "SOC.h"
 
 // ============================================================================
+// Module SOC — Estimation cadencée de l’état de charge
+// Projet : SBOVA – Fonction BMS (TRL3)
+//
+// Description :
+//   Ce module implémente l’estimation embarquée de l’état de charge (SOC)
+//   de la batterie. L’algorithme est conçu pour être appelé de manière
+//   cadencée (typiquement 1 Hz) et fournit un SOC normalisé exploitable
+//   par les autres briques du BMS (RINT, SOH, RUL, SOP, supervision).
+//
+//   Selon l’implémentation retenue, l’estimation peut combiner :
+//     - une intégration du courant (coulomb counting),
+//     - un modèle batterie (OCV, dynamique),
+//     - un correcteur / observateur (ex. filtre de Kalman).
+//
+// Entrées (par appel) :
+//   - ctx     : contexte SOC déjà initialisé (SOC_Context)
+//   - tension : tension batterie mesurée [V]
+//   - courant : courant batterie mesuré [A]
+//               Convention identique à celle utilisée dans le reste du BMS
+//   - temperature (optionnel selon implémentation) : [°C]
+//
+// Sorties :
+//   - Valeur de retour :
+//       SOC courant normalisé [0–1]
+//
+// Rôle dans l’architecture BMS :
+//   - Fournit le SOC aux modules :
+//       • RINT (conditions d’inhibition)
+//       • RUL  (comptage des cycles équivalents)
+//       • SOP  (limitations de puissance)
+//   - Sert de variable d’état centrale du système
+//
+// Hypothèses et remarques :
+//   - Appel strictement cadencé (dt constant)
+//   - Saturation du SOC dans l’intervalle [0–1]
+//   - Aucune allocation dynamique
+//   - Le premier appel initialise les mémoires internes
+//
+// Auteur :
+//   Projet SBOVA – INSA Strasbourg / ICube
+//
+// Date de création :
+//   2026-01-08
+//
+// Dernière modification :
+//   2026-01-08
+// ============================================================================
+
+
+// ============================================================================
 // Constantes modèle SOC 
 // ============================================================================
 

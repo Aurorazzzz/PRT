@@ -1,6 +1,55 @@
 #include <math.h>
 #include "RUL.h"
 
+// ============================================================================
+// Module RUL — Estimation cadencée de la durée de vie restante
+// Projet : SBOVA – Fonction BMS (TRL3)
+//
+// Description :
+//   Ce module implémente l’estimation en ligne de la Remaining Useful Life
+//   (RUL) de la batterie à partir de l’état de santé (SOH) et de l’usage,
+//   via un filtre de Kalman discret déclenché à chaque demi-cycle équivalent.
+//
+//   L’usure est comptabilisée par intégration des variations de SOC, et
+//   chaque incrément de demi-cycle provoque une mise à jour du filtre.
+//   La mesure utilisée par le filtre est issue d’une loi empirique RUL(SOH)
+//   interpolée.
+//
+// Entrées (par appel) :
+//   - ctx : contexte RUL déjà initialisé (RUL_Context)
+//   - SOH : état de santé normalisé [0–1]
+//   - SOC : état de charge normalisé [0–1]
+//
+// Sorties :
+//   - Valeur de retour :
+//       RUL corrigée courante (RUL_est / vitesse_degradation)
+//
+// Principe de fonctionnement :
+//   1) Accumulation de l’usage via |ΔSOC| / dt
+//   2) Détection d’un nouveau demi-cycle (floor(integrale_SOC / 2))
+//   3) À chaque déclenchement :
+//        - Prédiction Kalman (modèle linéaire)
+//        - Mesure z = RUL(SOH) via interpolation
+//        - Correction Kalman (gain adaptatif)
+//   4) En dehors des déclenchements, l’état est conservé
+//
+// Hypothèses et remarques :
+//   - Appel cadencé (dt constant, typiquement 1 s)
+//   - La loi RUL(SOH) est supposée monotone et définie sur [0–1]
+//   - Aucun appel dynamique mémoire
+//   - Protection contre divisions par zéro incluse
+//
+// Auteur :
+//   Projet SBOVA – INSA Strasbourg / ICube
+//
+// Date de création :
+//   2026-01-08
+//
+// Dernière modification :
+//   2026-01-08
+// ============================================================================
+
+
 // Prototype de l'interpolation (implémentée ailleurs)
 float interp1Drapide(const float *x, const float *y, int n, float x_req);
 

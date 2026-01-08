@@ -1,6 +1,51 @@
 #include <math.h>
 #include "sur_tension.h"
 
+// ============================================================================
+// Module SUR_TENSION — Surveillance cadencée de la tension batterie
+// Projet : SBOVA – Fonction BMS (TRL3)
+//
+// Description :
+//   Ce module assure la surveillance en ligne de la tension de la batterie.
+//   Il compare la tension mesurée à des seuils configurables afin de détecter
+//   des situations de surtension et de sous-tension.
+//
+//   L’algorithme est conçu pour un appel cadencé (typiquement 1 Hz) et peut
+//   intégrer des mécanismes d’hystérésis et de temporisation pour garantir
+//   une détection robuste et éviter les déclenchements intempestifs.
+//
+// Entrées (par appel) :
+//   - ctx     : contexte de surveillance tension déjà initialisé
+//               (SUR_TENSION_Context)
+//   - tension : tension batterie mesurée [V]
+//
+// Sorties :
+//   - Valeur de retour :
+//       état tension courant (OK / ALERTE / DÉFAUT selon implémentation)
+//   - Flags internes dans le contexte utilisables par le superviseur BMS
+//
+// Rôle dans l’architecture BMS :
+//   - Protection électrique de la batterie
+//   - Condition d’inhibition pour les estimateurs (SOC, RINT, SOH)
+//   - Entrée de sécurité pour la limitation de puissance (SOP)
+//
+// Hypothèses et remarques :
+//   - Appel strictement cadencé avec période constante
+//   - Seuils de tension définis et initialisés dans le contexte
+//   - Aucun appel à l’allocation dynamique mémoire
+//   - Comportement déterministe compatible embarqué temps réel
+//
+// Auteur :
+//   Projet SBOVA – INSA Strasbourg / ICube
+//
+// Date de création :
+//   2026-01-08
+//
+// Dernière modification :
+//   2026-01-08
+// ============================================================================
+
+
 // Interpolation 1D rapide (prototype ; implémentation ailleurs)
 float interp1Drapide(const float *x, const float *y, int n, float x_req);
 

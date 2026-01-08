@@ -3,6 +3,52 @@
 #include "SOH.h"
 
 // ============================================================================
+// Module SOH — Estimation cadencée de l’état de santé
+// Projet : SBOVA – Fonction BMS (TRL3)
+//
+// Description :
+//   Ce module implémente l’estimation en ligne de l’état de santé (SOH)
+//   de la batterie. Le SOH représente la capacité effective restante
+//   par rapport à l’état nominal de référence.
+//
+//   L’algorithme est conçu pour un appel cadencé et s’appuie sur les
+//   informations issues de l’usage de la batterie (SOC, courant,
+//   énergie échangée, ou indicateurs dérivés comme SOHR).
+//   Le SOH évolue lentement et n’est mis à jour qu’en conditions valides.
+//
+// Entrées (par appel) :
+//   - ctx     : contexte SOH déjà initialisé (SOH_Context)
+//   - SOC     : état de charge normalisé [0–1]
+//   - courant : courant batterie mesuré [A]
+//   - SOHR    : indicateur de santé lié à la résistance interne (optionnel)
+//
+// Sorties :
+//   - Valeur de retour :
+//       SOH courant normalisé [0–1]
+//
+// Rôle dans l’architecture BMS :
+//   - Indicateur global de vieillissement de la batterie
+//   - Entrée principale du module RUL
+//   - Utilisé pour l’adaptation des limites de puissance (SOP)
+//
+// Hypothèses et remarques :
+//   - Appel cadencé avec période constante
+//   - Variation lente et filtrée du SOH
+//   - Saturation systématique dans l’intervalle [0–1]
+//   - Aucune allocation dynamique mémoire
+//
+// Auteur :
+//   Projet SBOVA – INSA Strasbourg / ICube
+//
+// Date de création :
+//   2026-01-08
+//
+// Dernière modification :
+//   2026-01-08
+// ============================================================================
+
+
+// ============================================================================
 // Fonctions internes (static) : moyenne, détection, calcul SOH
 // ============================================================================
 
