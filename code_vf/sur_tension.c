@@ -53,6 +53,35 @@ float interp1Drapide(const float *x, const float *y, int n, float x_req);
 // Fonction principale : surveillance tension (step)
 // ============================================================================
 
+float modele_tension_1RC_step(float I, float SOC, float *Ir,
+                                     int etat,
+                                     const float *X_OCV,
+                                     const float *Y_OCV_charge,
+                                     const float *Y_OCV_decharge,
+                                     int n_OCV,
+                                     float dt, float R1, float C1, float R0)
+{
+    if (SOC < 0.0f) SOC = 0.0f;
+    if (SOC > 1.0f) SOC = 1.0f;
+
+    float denom = R1 * C1;
+    if (denom != 0.0f) {
+        float alpha = -dt / denom + 1.0f;
+        float beta  =  dt / denom;
+        *Ir = alpha * (*Ir) + beta * I;
+    }
+
+    if (SOC < 0.0f) SOC = 0.0f;
+    if (SOC > 1.0f) SOC = 1.0f;
+
+    const float *Y_tab = etat ? Y_OCV_decharge : Y_OCV_charge;
+
+    float OCV;
+    OCV = interp1Drapide(X_OCV, Y_tab, n_OCV, SOC);
+
+    return OCV - R1 * (*Ir) - R0 * I;
+}
+
 void surveillance_tension(float courant,
                           float SOC,
                           float tension_mesuree,
@@ -70,26 +99,9 @@ void surveillance_tension(float courant,
                           float *U,
                           int   *alerte)
 {
-    // Saturation SOC
-    if (SOC < 0.0f) SOC = 0.0f;
-    if (SOC > 1.0f) SOC = 1.0f;
-
-    // Filtre RC : Ir(k+1) = (-dt/(R1*C1)+1)*Ir(k) + (dt/(R1*C1))*courant(k)
-    float denom = R1 * C1;
-    if (denom != 0.0f) {
-        float alpha = -dt / denom + 1.0f;
-        float beta  =  dt / denom;
-        *Ir = alpha * (*Ir) + beta * courant;
-    }
-
-    // Sélection de la table OCV charge / décharge
-    const float *Y_tab = etat ? Y_OCV_decharge : Y_OCV_charge;
-
-    // Interpolation OCV(SOC)
-    float OCV = interp1Drapide(X_OCV, Y_tab, n_OCV, SOC);
-
-    // Tension modèle : U = OCV - R1*Ir - R0*courant
-    float U_loc = OCV - R1 * (*Ir) - R0 * courant;
+    
+    float U_loc = modele_tension_1RC_step(courant, SOC, Ir, etat,
+    X_OCV, Y_OCV_charge, Y_OCV_decharge, n_OCV, dt, R1, C1, R0);
     *U = U_loc;
 
     // Calcul de l’alerte
@@ -115,9 +127,9 @@ void TENSION_init(TENSION_Context *ctx)
     if (!ctx) return;
 
     ctx->dt    = 1.0f;
-    ctx->R1    = 0.0130f;
-    ctx->C1    = 653.6309f;
-    ctx->R0    = 0.0185f;
+    ctx->R1    = 0.013036399952773f;
+    ctx->C1    = 653.6308681504105f;
+    ctx->R0    = 0.018462339056011f;
     ctx->seuil = 1.0f;
 
     ctx->X_OCV         = X_OCV_global;

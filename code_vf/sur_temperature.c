@@ -47,6 +47,21 @@
 // ============================================================================
 
 
+void modele_thermique_foster_ordre_2_step(const float p[4], float I,
+                                                 float dt, float TAMB,
+                                                 float *T1, float *T2)
+{
+    float R1 = p[0], C1 = p[1], R2 = p[2], C2 = p[3];
+    float T1_prev = *T1;
+    float T2_prev = *T2;
+
+    float T1_inst = T1_prev + dt * (R1 * I * I + TAMB - T1_prev) / (R1 * C1);
+    float T2_inst = T2_prev + dt * (T1_prev - T2_prev) / (R2 * C2);
+
+    *T1 = T1_inst;
+    *T2 = T2_inst;
+}
+
 // ============================================================================
 // Fonction principale : surveillance température (équivalent MATLAB)
 //
@@ -68,12 +83,10 @@ void surveillance_temperature(float courant,
                               int *alerte)
 {
     // Modèle thermique Foster d'ordre 2
-    *T1 = *T1 + dt * (R1_modele_thermique * courant * courant +
-                      TAMB - *T1) /
-                      (R1_modele_thermique * C1_modele_thermique);
-
-    *T2 = *T2 + dt * (*T1 - *T2) /
-                      (R2_modele_thermique * C2_modele_thermique);
+    const float param[4] = {R1_modele_thermique, C1_modele_thermique, R2_modele_thermique, C2_modele_thermique };
+    
+    modele_thermique_foster_ordre_2_step(param, courant, dt,
+    TAMB, T1, T2);
 
     // Détection d'écart température mesurée vs modèle
     float diff = fabsf(temperature - *T2);

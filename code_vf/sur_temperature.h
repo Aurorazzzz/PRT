@@ -1,6 +1,10 @@
 #ifndef SUR_TEMPERATURE_H
 #define SUR_TEMPERATURE_H
 
+void modele_thermique_foster_ordre_2_step(const float p[4], float I,
+                                                 float dt, float TAMB,
+                                                 float *T1, float *T2);
+
 // ============================================================================
 // Fonction step "brute" : un échantillon → mise à jour T1/T2 + alerte
 // ============================================================================

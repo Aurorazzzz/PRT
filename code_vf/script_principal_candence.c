@@ -43,7 +43,7 @@ int main(void)
     const float *SOH_vec     = NULL;
     const float *SOC_vec     = NULL;
 
-    const int   NbIteration  = 10000;   // 1 000 000 pas de 1 s
+    const int   NbIteration  = 4800000;   // 1 000 000 pas de 1 s
     const float periode_s    = 1.0f;      // cadence logique : 1 seconde
 
     Charge_donnees(&courant, &tension, &temperature, &SOH_vec, &SOC_vec);
@@ -370,11 +370,6 @@ int main(void)
         // On mémorise le temps CPU utilisé pour ce pas de 1 s
         vect_temps_cycle[k] = (float)duree_cycle;
     }
-
-    printf("SOC 0 %f\n", vect_SOC_SOP[0]);
-    printf("SOC 1 %f\n", vect_SOC_SOP[1]);
-    printf("SOC 2 %f\n", vect_SOC_SOP[2]);
-    printf("SOC 3 %f\n", vect_SOC_SOP[3]);
 
     // =====================================================================
     // 6) Bilan des temps CPU

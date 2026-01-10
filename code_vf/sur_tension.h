@@ -1,12 +1,20 @@
 #ifndef SUR_TENSION_H
 #define SUR_TENSION_H
 
+
+float modele_tension_1RC_step(float I, float SOC, float *Ir,
+                                     int etat,
+                                     const float *X_OCV,
+                                     const float *Y_OCV_charge,
+                                     const float *Y_OCV_decharge,
+                                     int n_OCV,
+                                     float dt, float R1, float C1, float R0);
 // ============================================================================
 // Fonction step "brute" : un échantillon → mise à jour Ir, U, alerte
 // ============================================================================
 //
 // etat : 1 = décharge, 0 = charge
-//
+
 void surveillance_tension(float courant,
                           float SOC,
                           float tension_mesuree,
