@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "SOE_Theo.h"
+#include "SOE.h"
 #include "Read_Write.h"
 
 // ============================================================================
@@ -54,11 +54,11 @@
 float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
                      const float *X_OCV, const float *LOI_INTEG_OCV_DECHARGE, int n)
 {
-    if (SOC < 0.0f) SOC = 0.0f;
-    if (SOC > 1.0f) SOC = 1.0f;
-    if (SOH < 0.0f) SOH = 0.0f;
-    if (SOH > 1.0f) SOH = 1.0f;
-    if (moins_eta_sur_Q == 0.0f) return 0.0f;
+    // if (SOC < 0.0f) SOC = 0.0f;
+    // if (SOC > 1.0f) SOC = 1.0f;
+    // if (SOH < 0.0f) SOH = 0.0f;
+    // if (SOH > 1.0f) SOH = 1.0f;
+    // if (moins_eta_sur_Q == 0.0f) return 0.0f;
 
     float integrale_courant_pred = (1.0f / moins_eta_sur_Q) * SOH * SOC;
 
