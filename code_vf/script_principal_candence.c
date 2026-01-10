@@ -13,6 +13,7 @@
 #include "SOC.h"
 #include "SOP.h"
 #include "script_principal_candence.h"
+#include "etat_charge.h"
 
 static double duree_en_seconde(clock_t t0, clock_t t1)
 {
@@ -43,7 +44,7 @@ int main(void)
     const float *SOH_vec     = NULL;
     const float *SOC_vec     = NULL;
 
-    const int   NbIteration  = 4800000;   // 1 000 000 pas de 1 s
+    const int   NbIteration  = 1800;   // 1 000 000 pas de 1 s
     const float periode_s    = 1.0f;      // cadence logique : 1 seconde
 
     Charge_donnees(&courant, &tension, &temperature, &SOH_vec, &SOC_vec);
@@ -134,6 +135,7 @@ int main(void)
     RINT_Context rint_ctx;
     SOC_Context soc_ctx;
     SOP_Context sop_ctx;
+    ETAT_Context etat_ctx;
 
     TEMP_init(&temp_ctx);
     TENSION_init(&tens_ctx);
@@ -149,7 +151,7 @@ int main(void)
         vect_temp_SOP[i]=temperature[0];
         vect_SOC_SOP[i]=SOC_vec[0];
     }
-    
+    ETAT_init(&etat_ctx);
 
     printf("========= Execution des modules (step) dans UNE boucle cadencee a 1 s =========\n");
 
@@ -198,6 +200,13 @@ int main(void)
         float SOH_k   = SOH_vec[k];
 
         // -----------------------------------------------------------------
+        // 0) Etat charge décharge
+        // -----------------------------------------------------------------
+        
+        int etat_k = etat_charge_decharge(&etat_ctx, -I_mes);
+
+
+        // -----------------------------------------------------------------
         // a) Module TEMPERATURE
         // -----------------------------------------------------------------
         {
@@ -221,15 +230,14 @@ int main(void)
         {
             clock_t t0 = clock();
 
-            int   alerte = 0;
-            int   etat   = 1;       // décharge
+            int   alerte = 0;     
             float I_sim  = -I_mes;
 
             float U_model = TENSION_step(&tens_ctx,
                                          I_sim,
                                          SOC_k,
                                          U_mes,
-                                         etat,
+                                         etat_k,
                                          &alerte);
 
             clock_t t1 = clock();
@@ -239,6 +247,8 @@ int main(void)
 
             vect_U_tension[k]      = U_model;
             vect_alerte_tension[k] = (float)alerte;
+            printf("etat %d\n", etat_k);
+            printf("tension %f\n", U_model);
         }
 
         // -----------------------------------------------------------------

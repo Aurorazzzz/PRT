@@ -11,7 +11,8 @@ SRC = script_principal_candence.c \
 	  RINT.c \
 	  Read_Write.c \
 	  SOC.c \
-	  SOP.c 
+	  SOP.c \
+	  etat_charge.c
       
 
 # Chemin de sortie
