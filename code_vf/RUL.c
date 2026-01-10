@@ -1,5 +1,6 @@
 #include <math.h>
 #include "RUL.h"
+#include <stdio.h>
 
 // ============================================================================
 // Module RUL — Estimation cadencée de la durée de vie restante
