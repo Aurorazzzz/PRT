@@ -115,8 +115,8 @@ void estimation_RUL(float SOH,
                  ? (*RUL_est) / (*vitesse_degradation)
                  : 0.0f;
     
-    //printf("%f\n", *RUL_est);
-    //printf("%f\n", *RUL_corrige);
+    printf("est rul %f\n", *RUL_est);
+    printf("cor rul%f\n", *RUL_corrige);
 
 }
 
@@ -128,7 +128,7 @@ void RUL_setup(void)
     const float *SOH_vec = NULL, *SOC = NULL;
 
     /* Adapter cette valeur à la taille réelle de tes buffers */
-    const size_t NbIteration = 1000000;
+    const size_t NbIteration = 293089;
 
     float *vecteur_RUL = (float*)malloc(NbIteration * sizeof(float));
     if (!vecteur_RUL) { perror("malloc vecteur_RUL"); return; }
@@ -181,9 +181,9 @@ void RUL_setup(void)
 }
 
 
-/*int main(void) {
-    setup();
+int main(void) {
+    RUL_setup();
     puts("Fin du programme");
     return 0;
-}*/
+}
 

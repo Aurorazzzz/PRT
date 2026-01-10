@@ -44,7 +44,7 @@ int main(void)
     const float *SOH_vec     = NULL;
     const float *SOC_vec     = NULL;
 
-    const int   NbIteration  = 1800;   // 1 000 000 pas de 1 s
+    const int   NbIteration  = 1000000;   // 1 000 000 pas de 1 s
     const float periode_s    = 1.0f;      // cadence logique : 1 seconde
 
     Charge_donnees(&courant, &tension, &temperature, &SOH_vec, &SOC_vec);
@@ -219,7 +219,7 @@ int main(void)
             temp_TEMP_last = duree_en_seconde(t0, t1);
             temps_TEMP += temp_TEMP_last;
             if (temp_TEMP_last > temp_TEMP_max) temp_TEMP_max = temp_TEMP_last;
-
+            //printf("Temp %f\n", T2);
             vect_T2_temp[k]     = T2;
             vect_alerte_temp[k] = (float)alerte;
         }
@@ -247,8 +247,7 @@ int main(void)
 
             vect_U_tension[k]      = U_model;
             vect_alerte_tension[k] = (float)alerte;
-            printf("etat %d\n", etat_k);
-            printf("tension %f\n", U_model);
+
         }
 
         // -----------------------------------------------------------------
