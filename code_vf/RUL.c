@@ -250,5 +250,5 @@ float RUL_step(RUL_Context *ctx, float SOH, float SOC)
     printf("RUL_corrigee%f\n", RUL_corrige);
     printf("RUL_est%f\n", ctx->RUL_est);
     
-    return RUL_corrige;
+    return ctx->compteur_cycles;
 }
