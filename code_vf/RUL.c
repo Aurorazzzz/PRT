@@ -102,7 +102,6 @@ static void estimation_RUL_core(RUL_Context *ctx, float SOH, float delta_SOC)
     if (ctx->dt > 0.0f) {
         ctx->integrale_SOC += f_absf(delta_SOC) / ctx->dt;
     }
-    printf("integrale_SOC%f\n", ctx->integrale_SOC);
 
     /* 2) Déclenchement quand floor(integrale_SOC/2) augmente */
     int declenche = 0;
@@ -238,7 +237,6 @@ float RUL_step(RUL_Context *ctx, float SOH, float SOC)
         delta_SOC          = SOC - ctx->SOC_precedent;
         ctx->SOC_precedent = SOC;
     }
-    printf("delta SOC%f\n", delta_SOC);
     /* Mise à jour du filtre de Kalman */
     estimation_RUL_core(ctx, SOH, delta_SOC);
 
@@ -247,8 +245,6 @@ float RUL_step(RUL_Context *ctx, float SOH, float SOC)
     if (ctx->vitesse_degradation != 0.0f) {
         RUL_corrige = ctx->RUL_est / ctx->vitesse_degradation;
     }
-    printf("RUL_corrigee%f\n", RUL_corrige);
-    printf("RUL_est%f\n", ctx->RUL_est);
     
     return ctx->compteur_cycles;
 }

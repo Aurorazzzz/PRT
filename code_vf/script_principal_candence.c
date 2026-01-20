@@ -179,14 +179,14 @@ int main(void)
 
     for (int k = 0; k < NbIteration; ++k)
     {
-        int rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
-        if (rc != 0) {
-            // En vrai vous gérerez surtout EINTR (signal). Pour un test, on log juste.
-            // rc est un code d’erreur (pas errno).
-            fprintf(stderr, "clock_nanosleep error: %d\n", rc);
-        }
+        // int rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+        // if (rc != 0) {
+        //     // En vrai vous gérerez surtout EINTR (signal). Pour un test, on log juste.
+        //     // rc est un code d’erreur (pas errno).
+        //     fprintf(stderr, "clock_nanosleep error: %d\n", rc);
+        // }
 
-        printf("tick\n");
+        // printf("tick\n");
         printf("boucle%d\n", k);
         next = add_ns(next, period_ns);
 
@@ -219,7 +219,6 @@ int main(void)
             temp_TEMP_last = duree_en_seconde(t0, t1);
             temps_TEMP += temp_TEMP_last;
             if (temp_TEMP_last > temp_TEMP_max) temp_TEMP_max = temp_TEMP_last;
-            //printf("Temp %f\n", T2);
             vect_T2_temp[k]     = T2;
             vect_alerte_temp[k] = (float)alerte;
         }
