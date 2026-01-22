@@ -1,19 +1,18 @@
 CC = gcc
-CFLAGS = -O2 -Wall
+CFLAGS = -O2 -Wall -Iheaders
 LDLIBS += -lm
 
-SRC = script_principal_candence.c \
-      sur_temperature.c \
-      sur_tension.c \
-	  SOE.c \
-	  SOH.c \
-	  RUL.c \
-	  RINT.c \
-	  Read_Write.c \
-	  SOC.c \
-	  SOP.c \
-	  etat_charge.c
-      
+SRC = sources/script_principal_candence.c \
+      sources/sur_temperature.c \
+      sources/sur_tension.c \
+      sources/SOE.c \
+      sources/SOH.c \
+      sources/RUL.c \
+      sources/RINT.c \
+      sources/Read_Write.c \
+      sources/SOC.c \
+      sources/SOP.c \
+      sources/etat_charge.c
 
 # Chemin de sortie
 OUTDIR = output

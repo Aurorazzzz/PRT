@@ -146,7 +146,7 @@ int main(void)
     SOC_init(&soc_ctx);
     SOP_init(&sop_ctx, SOC_vec[0], SOH_vec[0], 60, temperature[0], 0, tension[0]);
     for (size_t i = 0; i < 3; ++i){
-        vect_SOP[i]=courant[0];
+        vect_SOP[i]=0;
         vect_tension_SOP[i]=tension[0];
         vect_temp_SOP[i]=temperature[0];
         vect_SOC_SOP[i]=SOC_vec[0];
@@ -179,14 +179,13 @@ int main(void)
 
     for (int k = 0; k < NbIteration; ++k)
     {
-        // int rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
-        // if (rc != 0) {
-        //     // En vrai vous gérerez surtout EINTR (signal). Pour un test, on log juste.
-        //     // rc est un code d’erreur (pas errno).
-        //     fprintf(stderr, "clock_nanosleep error: %d\n", rc);
-        // }
+        int rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+        if (rc != 0) {
 
-        // printf("tick\n");
+            fprintf(stderr, "clock_nanosleep error: %d\n", rc);
+        }
+
+        printf("tick\n");
         printf("boucle%d\n", k);
         next = add_ns(next, period_ns);
 
