@@ -342,15 +342,14 @@ int main(void)
         // -----------------------------------------------------------------
         // g) Module SOP 
         // -----------------------------------------------------------------
- 
+        // 
         if (k > 1 && k < NbIteration) 
         {
             float sop_ch, sop_dech;
-            int etat;
 
             clock_t t0 = clock();
 
-            float I_lim = SOP_step(&sop_ctx, -I_mes, &sop_ch, &sop_dech, &etat, SOH_k);
+            float I_lim = SOP_step(&sop_ctx, -I_mes, &sop_ch, &sop_dech, SOH_k, etat_k);
 
             clock_t t1 = clock();
 

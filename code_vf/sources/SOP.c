@@ -394,39 +394,39 @@ void SOP_init(SOP_Context *ctx,
 
     ctx->I_candidat = 0.0f;
 
-    for (int i = 0; i < 60; ++i) ctx->tampon_I[i] = 0.0f;
+
     ctx->etat = 0;
 }
 
-static void detection_phase_step(SOP_Context *ctx, float I)
-{
-    // decalage
-    memmove(&ctx->tampon_I[1], &ctx->tampon_I[0], (60 - 1) * sizeof(float));
-    ctx->tampon_I[0] = I;
+// static void detection_phase_step(SOP_Context *ctx, float I)
+// {
+//     // decalage
+//     memmove(&ctx->tampon_I[1], &ctx->tampon_I[0], (60 - 1) * sizeof(float));
+//     ctx->tampon_I[0] = I;
 
-    float somme = 0.0f;
-    for (int k = 0; k < 60; ++k) somme += ctx->tampon_I[k];
-    float moyenne = somme / 60.0f;
+//     float somme = 0.0f;
+//     for (int k = 0; k < 60; ++k) somme += ctx->tampon_I[k];
+//     float moyenne = somme / 60.0f;
 
-    int etat_prec = ctx->etat;
-    if (moyenne > 0.1f && etat_prec == 0)      ctx->etat = 1;
-    else if (moyenne < -1.0f && etat_prec == 1) ctx->etat = 0;
-}
+//     int etat_prec = ctx->etat;
+//     if (moyenne > 0.1f && etat_prec == 0)      ctx->etat = 1;
+//     else if (moyenne < -1.0f && etat_prec == 1) ctx->etat = 0;
+// }
 
 float SOP_step(SOP_Context *ctx,
                float I_consigne,
                float *SOP_charge_W,
                float *SOP_decharge_W,
-               int   *etat_out,
-               float SOH_mes)
+               float SOH_mes, 
+                int etat_k)
 {
     if (!ctx) return 0.0f;
 
 
     ctx->SOH = SOH_mes;
     // 1) détection charge/décharge sur la consigne
-    detection_phase_step(ctx, I_consigne);
-    if (etat_out) *etat_out = ctx->etat;
+    ctx->etat = etat_k;
+    // if (etat_out) *etat_out = ctx->etat;
 
     // 2) limitation prédictive (Pegase) -> courant_resultat
     float residus[3] = {0,0,0};

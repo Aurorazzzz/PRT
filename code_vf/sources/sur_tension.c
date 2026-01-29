@@ -46,8 +46,34 @@
 // ============================================================================
 
 
-// Interpolation 1D rapide (prototype ; implémentation ailleurs)
-float interp1Drapide(const float *x, const float *y, int n, float x_req);
+// ============================================================================
+// Interpolation linéaire rapide 1D 
+// ============================================================================
+float interp1Drapide(const float *x_tab, const float *y_tab, int n, float x)
+{
+    if (n <= 0) return 0.0f;
+
+    // Gestion des bornes
+    if (x <= x_tab[0])
+        return y_tab[0];
+    if (x >= x_tab[n - 1])
+        return y_tab[n - 1];
+
+    // Recherche de l'intervalle contenant x
+    for (int i = 0; i < n - 1; ++i) {
+        if (x >= x_tab[i] && x <= x_tab[i + 1]) {
+            float dx = x_tab[i + 1] - x_tab[i];
+            float dy = y_tab[i + 1] - y_tab[i];
+            if (dx == 0) return y_tab[i];
+            float t = (x - x_tab[i]) / dx;
+            return y_tab[i] + t * dy;
+        }
+    }
+
+    // Sécurité
+    return y_tab[n - 1];
+}
+
 
 // ============================================================================
 // Fonction principale : surveillance tension (step)

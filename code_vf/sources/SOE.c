@@ -47,6 +47,8 @@
 //   2026-01-08
 // ============================================================================
 
+// Fct déclaré ailleur
+float interp1Drapide(const float *x_tab, const float *y_tab, int n, float x);
 
 // ============================================================================
 // Fonction principale : estimation du SOE (fonction point par point)
@@ -54,18 +56,18 @@
 float estimation_SOE(float SOC, float SOH, float moins_eta_sur_Q,
                      const float *X_OCV, const float *LOI_INTEG_OCV_DECHARGE, int n)
 {
-     if (SOC < 0.0f) SOC = 0.0f;
-     if (SOC > 1.0f) SOC = 1.0f;
-     if (SOH < 0.0f) SOH = 0.0f;
-     if (SOH > 1.0f) SOH = 1.0f;
-     if (moins_eta_sur_Q == 0.0f) return 0.0f;
+    //  if (SOC < 0.0f) SOC = 0.0f;
+    //  if (SOC > 1.0f) SOC = 1.0f;
+    //  if (SOH < 0.0f) SOH = 0.0f;
+    //  if (SOH > 1.0f) SOH = 1.0f;
+    //  if (moins_eta_sur_Q == 0.0f) return 0.0f;
 
     float integrale_courant_pred = (1.0f / moins_eta_sur_Q) * SOH * SOC;
 
     float ocv_moyenne = interp1Drapide(X_OCV, LOI_INTEG_OCV_DECHARGE, n, SOC);
 
     float s = ocv_moyenne * integrale_courant_pred;
-    if (s < 0.0f) s = 0.0f;
+    // if (s < 0.0f) s = 0.0f;
 
     return s;
 }

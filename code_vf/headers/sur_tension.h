@@ -2,6 +2,12 @@
 #define SUR_TENSION_H
 
 
+// ============================================================================
+// Interpolation linéaire rapide 1D 
+// ============================================================================
+float interp1Drapide(const float *x_tab, const float *y_tab, int n, float x);
+
+
 float modele_tension_1RC_step(float I, float SOC, float *Ir,
                                      int etat,
                                      const float *X_OCV,

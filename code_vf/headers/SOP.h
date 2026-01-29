@@ -48,40 +48,34 @@ typedef struct
 
     float I_candidat;
 
-    float tampon_I[60];
     int   etat; /* 0=charge, 1=decharge */
 
 } SOP_Context;
 
 
-// init : vous donnez conditions initiales (SOC/SOH/T1/T2/Ir + tension init)
 void SOP_init(SOP_Context *ctx,
               float SOC0, float SOH0,
               float T1_0, float T2_0,
               float Ir0,
               float U0);
 
-// optionnel : si SOH vient d’un autre module step
-static inline void SOP_set_SOH(SOP_Context *ctx, float SOH)
-{
-    if (!ctx) return;
-    ctx->SOH = SOH;
-}
+// static inline void SOP_set_SOH(SOP_Context *ctx, float SOH)
+// {
+//     if (!ctx) return;
+//     ctx->SOH = SOH;
+// }
 
-// optionnel : si vous voulez forcer SOC (ex : venant de votre estimation SOC)
-static inline void SOP_set_SOC(SOP_Context *ctx, float SOC)
-{
-    if (!ctx) return;
-    ctx->SOC = SOC;
-}
+// static inline void SOP_set_SOC(SOP_Context *ctx, float SOC)
+// {
+//     if (!ctx) return;
+//     ctx->SOC = SOC;
+// }
 
-// tick : entrée = courant demandé (consigne).
-// sortie = courant limité (ce que vous appliquez réellement) + SOP charge/décharge (puissance) + etat.
 float SOP_step(SOP_Context *ctx,
                float I_consigne,
                float *SOP_charge_W,
                float *SOP_decharge_W,
-               int   *etat_out, float SOH);
+               float SOH, int etat_k);
 
 #ifdef __cplusplus
 }
